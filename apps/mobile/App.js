@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   StyleSheet, 
   Text, 
@@ -6,12 +6,16 @@ import {
   ScrollView, 
   SafeAreaView, 
   StatusBar,
-  TouchableOpacity
+  TouchableOpacity,
+  Alert
 } from 'react-native';
-import { Plus, Music } from 'lucide-react-native';
+import { Plus, Music, WifiOff } from 'lucide-react-native';
+import NetInfo from '@react-native-community/netinfo';
 import SerenataCard from './src/components/SerenataCard';
+import { SyncService } from './src/lib/syncService';
 
 export default function App() {
+  const [isOffline, setIsOffline] = useState(false);
   const [serenatas] = useState([
     {
       id: '1',
@@ -35,10 +39,30 @@ export default function App() {
     }
   ]);
 
+  useEffect(() => {
+    // Iniciar escucha de red para sincronización autónoma
+    SyncService.initNetworkListener();
+
+    // Monitor manual para UI
+    const unsubscribe = NetInfo.addEventListener(state => {
+      setIsOffline(!state.isConnected);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
       
+      {/* Indicador Offline */}
+      {isOffline && (
+        <View style={styles.offlineBanner}>
+          <WifiOff size={14} color="#FFF" />
+          <Text style={styles.offlineText}>Estás en modo Offline. Los cambios se sincronizarán al volver.</Text>
+        </View>
+      )}
+
       {/* Header */}
       <View style={styles.header}>
         <View>
@@ -70,6 +94,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000',
+  },
+  offlineBanner: {
+    backgroundColor: '#FF4444',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    gap: 10,
+  },
+  offlineText: {
+    color: '#FFF',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   header: {
     padding: 20,
