@@ -1,7 +1,19 @@
 import { Router } from 'express';
-import { getPagosBySerenata, createPago } from '../controllers/pagoController';
+import { getPagosBySerenata, createPago, getAllPagos } from '../controllers/pagoController';
 
 const router = Router();
+
+/**
+ * @swagger
+ * /api/pagos:
+ *   get:
+ *     summary: Obtiene todos los pagos registrados
+ *     tags: [Pagos]
+ *     responses:
+ *       200:
+ *         description: Lista completa de pagos
+ */
+router.get('/', getAllPagos);
 
 /**
  * @swagger

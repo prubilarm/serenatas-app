@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { supabase } from '../utils/supabase';
-import { Serenata } from '@shared/index';
+import { Serenata } from '../shared-types';
 
 export const getSerenatas = async (req: Request, res: Response) => {
   try {
