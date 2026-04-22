@@ -78,9 +78,9 @@ const Sidebar = () => {
   return (
     <>
       {/* ═══════════════════════════════════════════════════════════════
-          SIDEBAR DESKTOP — visible solo en md+
+          SIDEBAR DESKTOP — controlado por media query en globals.css
       ═══════════════════════════════════════════════════════════════ */}
-      <div className="hidden md:flex w-64 h-screen bg-black/40 backdrop-blur-3xl border-r border-white/5 flex-col shrink-0 sticky top-0 z-50">
+      <div className="sidebar-desktop">
         {/* Logo */}
         <div className="p-8 pb-6">
           <h1 className="hero-title text-xl font-bold gold-gradient-text tracking-[0.3em]">
@@ -112,9 +112,9 @@ const Sidebar = () => {
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════
-          HEADER MÓVIL — visible solo en mobile
+          HEADER MÓVIL — controlado por media query en globals.css
       ═══════════════════════════════════════════════════════════════ */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3 bg-black/90 backdrop-blur-xl border-b border-white/8">
+      <div className="mobile-header">
         <div>
           <h1 className="hero-title text-sm font-bold gold-gradient-text tracking-[0.2em]">
             MARIACHI AVENTURERO
@@ -130,7 +130,7 @@ const Sidebar = () => {
       </div>
 
       {/* Espacio para que el contenido no quede debajo del header fijo */}
-      <div className="md:hidden h-[56px] shrink-0" />
+      <div className="mobile-header-spacer" />
 
       {/* ═══════════════════════════════════════════════════════════════
           DRAWER MÓVIL — panel lateral que aparece al presionar menú
@@ -138,16 +138,14 @@ const Sidebar = () => {
       {/* Overlay oscuro */}
       {mobileOpen && (
         <div
-          className="md:hidden fixed inset-0 bg-black/80 z-[60] backdrop-blur-sm"
+          className="mobile-drawer-overlay"
           onClick={() => setMobileOpen(false)}
         />
       )}
 
       {/* Panel del drawer */}
       <div
-        className={`md:hidden fixed top-0 left-0 h-full w-72 bg-[#080808] border-r border-white/10 z-[70] flex flex-col transition-transform duration-300 ease-in-out ${
-          mobileOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className={`mobile-drawer ${mobileOpen ? 'open' : ''}`}
       >
         {/* Header del drawer */}
         <div className="flex items-center justify-between p-6 border-b border-white/8">
@@ -189,9 +187,9 @@ const Sidebar = () => {
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════
-          BOTTOM NAV MÓVIL — los 4 más usados fijos abajo
+          BOTTOM NAV MÓVIL — controlado por media query en globals.css
       ═══════════════════════════════════════════════════════════════ */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-xl border-t border-white/8 flex">
+      <nav className="bottom-nav">
         {menuItems.slice(0, 5).map((item) => {
           const isActive = pathname === item.href;
           return (

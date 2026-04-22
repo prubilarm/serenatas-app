@@ -102,15 +102,15 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      {/* Grid de Stats: 2 cols en móvil, 4 en desktop */}
-      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
+      {/* Grid de Stats: controlado por media query en globals.css */}
+      <div className="stats-grid">
         {stats.map((stat) => (
           <StatCard key={stat.title} {...stat} />
         ))}
       </div>
 
-      {/* Secciones Inferiores */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 md:gap-8">
+      {/* Secciones Inferiores: controlado por media query en globals.css */}
+      <div className="bottom-section-grid">
         {/* Próximas Serenatas */}
         <div className="lg:col-span-2 glass-card !p-0 overflow-hidden">
           <div className="p-8 pb-4 flex justify-between items-center border-b border-white/5">
