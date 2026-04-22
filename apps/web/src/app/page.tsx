@@ -15,22 +15,23 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 const StatCard = ({ title, value, icon: Icon, description, trend, color }: any) => (
-  <div className="glass-card group hover:translate-y-[-4px]">
-    <div className="flex justify-between items-start mb-4">
-      <div className={`p-3 rounded-2xl ${color || 'bg-[var(--accent-gold)]/10 text-[var(--accent-gold)]'}`}>
-        <Icon size={24} />
+  <div className="glass-card group hover:translate-y-[-4px] !p-4 md:!p-6">
+    <div className="flex justify-between items-start mb-3">
+      <div className={`p-2 md:p-3 rounded-xl md:rounded-2xl ${color || 'bg-[var(--accent-gold)]/10 text-[var(--accent-gold)]'}`}>
+        <Icon size={18} className="md:hidden" />
+        <Icon size={24} className="hidden md:block" />
       </div>
       {trend && (
-        <span className="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded-full flex items-center gap-1 font-bold uppercase tracking-tighter">
-          {trend} <ArrowUpRight size={10} />
+        <span className="text-[9px] bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded-full flex items-center gap-1 font-bold uppercase tracking-tighter">
+          {trend} <ArrowUpRight size={9} />
         </span>
       )}
     </div>
     <div>
-      <p className="text-white/40 text-[10px] font-bold uppercase tracking-[0.2em] mb-1">{title}</p>
-      <p className="text-3xl font-bold text-white tracking-tight">{value}</p>
+      <p className="text-white/40 text-[9px] font-bold uppercase tracking-[0.15em] mb-1">{title}</p>
+      <p className="text-2xl md:text-3xl font-bold text-white tracking-tight">{value}</p>
     </div>
-    <div className="mt-4 pt-4 border-t border-white/5">
+    <div className="hidden md:block mt-4 pt-4 border-t border-white/5">
       <p className="text-[10px] text-white/20 font-medium italic">{description}</p>
     </div>
   </div>
@@ -81,17 +82,17 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div className="max-w-7xl mx-auto space-y-12 pb-20">
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+    <div className="max-w-7xl mx-auto space-y-8 md:space-y-12 pb-20">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="hero-title text-4xl font-bold gold-gradient-text tracking-tighter">
+          <h1 className="hero-title text-2xl md:text-4xl font-bold gold-gradient-text tracking-tighter">
             PANEL DE CONTROL
           </h1>
-          <p className="text-white/40 mt-2 font-medium tracking-wide">
+          <p className="text-white/40 mt-2 font-medium tracking-wide text-sm">
             Resumen operativo para hoy, <span className="text-white/70">{format(new Date(), "EEEE dd 'de' MMMM", { locale: es })}</span>
           </p>
         </div>
-        <div className="flex gap-4">
+        <div className="hidden md:flex gap-4">
           <button className="px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/60 text-sm font-bold hover:bg-white/10 transition-all uppercase tracking-widest">
             Soporte
           </button>
@@ -101,15 +102,15 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      {/* Grid de Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Grid de Stats: 2 cols en móvil, 4 en desktop */}
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
         {stats.map((stat) => (
           <StatCard key={stat.title} {...stat} />
         ))}
       </div>
 
       {/* Secciones Inferiores */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 md:gap-8">
         {/* Próximas Serenatas */}
         <div className="lg:col-span-2 glass-card !p-0 overflow-hidden">
           <div className="p-8 pb-4 flex justify-between items-center border-b border-white/5">
