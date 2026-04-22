@@ -237,64 +237,64 @@ export default function SerenatasPage() {
           <form onSubmit={handleSubmit} className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6">
               {/* Sección Cliente */}
-              <div className="space-y-6 bg-white/[0.02] p-6 rounded-2xl border border-white/5">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-1 h-4 bg-[var(--accent-gold)] rounded-full"></div>
-                  <span className="text-[10px] font-black uppercase text-white/30 tracking-[0.2em]">Datos del Cliente</span>
+              <div className="space-y-8 bg-white/[0.02] p-8 rounded-3xl border border-white/5 shadow-xl">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-1.5 h-6 bg-[var(--accent-gold)] rounded-full"></div>
+                  <span className="text-xs font-black uppercase text-[var(--accent-gold)] tracking-[0.3em]">1. Datos del Cliente</span>
                 </div>
-                <div className="group">
-                  <label className="label-text">Cliente que contrata</label>
-                  <input required type="text" name="nombre_cliente" onChange={handleInputChange} value={formData.nombre_cliente} className="input-field" placeholder="Nombre completo del contratante" />
+                <div className="space-y-2">
+                  <label className="label-text !mb-3">Nombre del Cliente (Contratante)</label>
+                  <input required type="text" name="nombre_cliente" onChange={handleInputChange} value={formData.nombre_cliente} className="input-field" placeholder="Nombre completo" />
                 </div>
-                <div className="group">
-                  <label className="label-text">Teléfono contacto</label>
-                  <input required type="text" name="telefono" onChange={handleInputChange} value={formData.telefono} className="input-field" placeholder="+569..." />
+                <div className="space-y-2">
+                  <label className="label-text !mb-3">Teléfono de contacto</label>
+                  <input required type="text" name="telefono" onChange={handleInputChange} value={formData.telefono} className="input-field" placeholder="+569 1234 5678" />
                 </div>
-                <div className="group">
-                  <label className="label-text">Festejada(o)</label>
-                  <input required type="text" name="nombre_festejada" onChange={handleInputChange} value={formData.nombre_festejada} className="input-field" placeholder="¿A quién le cantamos?" />
+                <div className="space-y-2">
+                  <label className="label-text !mb-3">Nombre de la Festejada(o)</label>
+                  <input required type="text" name="nombre_festejada" onChange={handleInputChange} value={formData.nombre_festejada} className="input-field" placeholder="¿Para quién es la sorpresa?" />
                 </div>
-                <div className="group">
-                  <label className="label-text">Motivo o Evento</label>
-                  <input required type="text" name="motivo" onChange={handleInputChange} value={formData.motivo} className="input-field" placeholder="Ej. Cumpleaños, Aniversario..." />
+                <div className="space-y-2">
+                  <label className="label-text !mb-3">Motivo o Evento Especial</label>
+                  <input required type="text" name="motivo" onChange={handleInputChange} value={formData.motivo} className="input-field" placeholder="Ej. Cumpleaños, Bodas de Oro..." />
                 </div>
               </div>
 
               {/* Sección Logística */}
-              <div className="space-y-6 bg-white/[0.02] p-6 rounded-2xl border border-white/5">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-1 h-4 bg-[var(--accent-gold)] rounded-full"></div>
-                  <span className="text-[10px] font-black uppercase text-white/30 tracking-[0.2em]">Logística del Evento</span>
+              <div className="space-y-8 bg-white/[0.02] p-8 rounded-3xl border border-white/5 shadow-xl">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-1.5 h-6 bg-[var(--accent-gold)] rounded-full"></div>
+                  <span className="text-xs font-black uppercase text-[var(--accent-gold)] tracking-[0.3em]">2. Ubicación y Horario</span>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="label-text">Fecha</label>
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="label-text !mb-3">Fecha del Evento</label>
                     <input required type="date" name="fecha" onChange={handleInputChange} value={formData.fecha} className="input-field" />
                   </div>
-                  <div>
-                    <label className="label-text">Hora</label>
+                  <div className="space-y-2">
+                    <label className="label-text !mb-3">Hora de llegada</label>
                     <input required type="time" name="hora" onChange={handleInputChange} value={formData.hora} className="input-field" />
                   </div>
                 </div>
-                <div className="group">
-                  <label className="label-text">Dirección Exacta</label>
-                  <input required type="text" name="direccion" onChange={handleInputChange} value={formData.direccion} className="input-field" placeholder="Calle, número, depto/casa" />
+                <div className="space-y-2">
+                  <label className="label-text !mb-3">Dirección Completa</label>
+                  <input required type="text" name="direccion" onChange={handleInputChange} value={formData.direccion} className="input-field" placeholder="Calle, número, depto o referencia" />
                 </div>
-                <div className="group">
-                  <label className="label-text">Comuna / Ciudad</label>
-                  <input required type="text" name="comuna" onChange={handleInputChange} value={formData.comuna} className="input-field" placeholder="Ej. Los Angeles" />
+                <div className="space-y-2">
+                  <label className="label-text !mb-3">Comuna / Ciudad</label>
+                  <input required type="text" name="comuna" onChange={handleInputChange} value={formData.comuna} className="input-field" placeholder="Donde se realizará" />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="label-text">Tipo de Servicio</label>
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="label-text !mb-3">Modalidad</label>
                     <select name="tipo" onChange={handleInputChange} value={formData.tipo} className="input-field appearance-none bg-black">
-                      <option value="express">Express (2 canciones)</option>
-                      <option value="full">Full (4 canciones)</option>
+                      <option value="express">Express (2s)</option>
+                      <option value="full">Full (4s)</option>
                     </select>
                   </div>
-                  <div>
-                    <label className="label-text">Precio Acordado</label>
-                    <input required type="number" name="precio_total" onChange={handleInputChange} value={formData.precio_total} className="input-field font-black text-[var(--accent-gold)] text-lg" />
+                  <div className="space-y-2">
+                    <label className="label-text !mb-3">Precio Acordado ($)</label>
+                    <input required type="number" name="precio_total" onChange={handleInputChange} value={formData.precio_total} className="input-field font-black text-[var(--accent-gold)] text-xl text-right" />
                   </div>
                 </div>
               </div>
