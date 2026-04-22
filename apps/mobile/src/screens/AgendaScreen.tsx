@@ -238,7 +238,8 @@ export default function AgendaScreen() {
       return;
     }
     try {
-      const payload = {
+      // Payload base sin estado (para no sobreescribir al editar)
+      const payloadBase = {
         nombre_cliente: nombreCliente,
         telefono,
         nombre_festejada: festejada,
@@ -250,8 +251,11 @@ export default function AgendaScreen() {
         precio_total: Number(precio),
         tipo,
         canciones,
-        estado: 'pendiente'
       };
+      // Solo se añade estado al crear, no al editar
+      const payload = editingId
+        ? payloadBase
+        : { ...payloadBase, estado: 'pendiente' };
 
       if (editingId) {
         const { error } = await supabase.from('serenatas').update(payload).eq('id', editingId);
@@ -352,60 +356,94 @@ export default function AgendaScreen() {
             </View>
 
             <ScrollView style={styles.modalForm} showsVerticalScrollIndicator={false}>
-              <Text style={styles.label}>Cliente que contrata</Text>
-              <TextInput style={styles.input} placeholder="Nombre del cliente" placeholderTextColor="#666" value={nombreCliente} onChangeText={setNombreCliente} />
-              <TextInput style={styles.input} placeholder="Teléfono del cliente" placeholderTextColor="#666" keyboardType="phone-pad" value={telefono} onChangeText={setTelefono} />
 
-              <Text style={styles.label}>Detalles del Evento</Text>
-              <TextInput style={styles.input} placeholder="¿A quién le cantamos?" placeholderTextColor="#666" value={festejada} onChangeText={setFestejada} />
-              <TextInput style={styles.input} placeholder="Motivo (Ej. Cumpleaños)" placeholderTextColor="#666" value={motivo} onChangeText={setMotivo} />
-
-              <View style={styles.row}>
-                <TextInput style={[styles.input, { flex: 1, marginRight: 10 }]} placeholder="Fecha (YYYY-MM-DD)" placeholderTextColor="#666" value={fecha} onChangeText={setFecha} />
-                <TextInput style={[styles.input, { flex: 1 }]} placeholder="Hora (HH:MM)" placeholderTextColor="#666" value={hora} onChangeText={setHora} />
-              </View>
-
-              <TextInput style={styles.input} placeholder="Dirección completa" placeholderTextColor="#666" value={direccion} onChangeText={setDireccion} />
-              <TextInput style={styles.input} placeholder="Comuna / Ciudad" placeholderTextColor="#666" value={comuna} onChangeText={setComuna} />
-
-              <Text style={styles.label}>Tipo y Precio</Text>
-              <View style={[styles.row, { marginBottom: 15 }]}>
-                <View style={styles.typeSwitcher}>
-                  <TouchableOpacity onPress={() => setTipo('express')} style={[styles.typeBtn, tipo === 'express' && styles.typeBtnActive]}>
-                    <Text style={[styles.typeText, tipo === 'express' && styles.typeTextActive]}>Express (2s)</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => setTipo('full')} style={[styles.typeBtn, tipo === 'full' && styles.typeBtnActive]}>
-                    <Text style={[styles.typeText, tipo === 'full' && styles.typeTextActive]}>Full (4s)</Text>
-                  </TouchableOpacity>
+              {/* ── SECCIÓN: CLIENTE ── */}
+              <View style={styles.sectionBlock}>
+                <Text style={styles.sectionLabel}>Cliente que contrata</Text>
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.fieldLabel}>Nombre</Text>
+                  <TextInput style={styles.input} placeholder="Ej. Juan Pérez" placeholderTextColor="#555" value={nombreCliente} onChangeText={setNombreCliente} />
                 </View>
-                <View style={styles.priceContainer}>
-                  <DollarSign size={14} color="#D4AF37" />
-                  <TextInput style={styles.priceInput} keyboardType="numeric" value={precio} onChangeText={setPrecio} />
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.fieldLabel}>Teléfono</Text>
+                  <TextInput style={styles.input} placeholder="Ej. 912345678" placeholderTextColor="#555" keyboardType="phone-pad" value={telefono} onChangeText={setTelefono} />
                 </View>
               </View>
 
-              {/* Selector de canciones */}
-              <Text style={styles.label}>Canciones ({canciones.length})</Text>
-              <TouchableOpacity style={styles.addSongsBtn} onPress={() => setShowSongPicker(true)}>
-                <ListMusic size={20} color="#D4AF37" />
-                <Text style={styles.addSongsText}>
-                  {canciones.length === 0 ? 'Elegir canciones del repertorio' : `${canciones.length} canción${canciones.length !== 1 ? 'es' : ''} seleccionada${canciones.length !== 1 ? 's' : ''} — cambiar`}
-                </Text>
-              </TouchableOpacity>
-
-              {/* Preview de canciones seleccionadas */}
-              {canciones.length > 0 && (
-                <View style={styles.selectedSongsPreview}>
-                  {[...canciones].sort().map((song: string, idx: number) => (
-                    <View key={idx} style={styles.songTag}>
-                      <Text style={styles.songTagText}>{song}</Text>
-                      <TouchableOpacity onPress={() => setCanciones(canciones.filter((c: string) => c !== song))}>
-                        <X size={11} color="#D4AF37" />
-                      </TouchableOpacity>
-                    </View>
-                  ))}
+              {/* ── SECCIÓN: EVENTO ── */}
+              <View style={styles.sectionBlock}>
+                <Text style={styles.sectionLabel}>Detalles del Evento</Text>
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.fieldLabel}>¿A quién le cantamos?</Text>
+                  <TextInput style={styles.input} placeholder="Nombre de la festejada" placeholderTextColor="#555" value={festejada} onChangeText={setFestejada} />
                 </View>
-              )}
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.fieldLabel}>Motivo</Text>
+                  <TextInput style={styles.input} placeholder="Ej. Cumpleaños, Aniversario" placeholderTextColor="#555" value={motivo} onChangeText={setMotivo} />
+                </View>
+                <View style={styles.row}>
+                  <View style={[styles.fieldGroup, { flex: 1, marginRight: 10 }]}>
+                    <Text style={styles.fieldLabel}>Fecha</Text>
+                    <TextInput style={styles.input} placeholder="YYYY-MM-DD" placeholderTextColor="#555" value={fecha} onChangeText={setFecha} />
+                  </View>
+                  <View style={[styles.fieldGroup, { flex: 1 }]}>
+                    <Text style={styles.fieldLabel}>Hora</Text>
+                    <TextInput style={styles.input} placeholder="HH:MM" placeholderTextColor="#555" value={hora} onChangeText={setHora} />
+                  </View>
+                </View>
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.fieldLabel}>Dirección</Text>
+                  <TextInput style={styles.input} placeholder="Calle, número, departamento" placeholderTextColor="#555" value={direccion} onChangeText={setDireccion} />
+                </View>
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.fieldLabel}>Comuna / Ciudad</Text>
+                  <TextInput style={styles.input} placeholder="Ej. Santiago, Providencia" placeholderTextColor="#555" value={comuna} onChangeText={setComuna} />
+                </View>
+              </View>
+
+              {/* ── SECCIÓN: TIPO Y PRECIO ── */}
+              <View style={styles.sectionBlock}>
+                <Text style={styles.sectionLabel}>Tipo y Precio</Text>
+                <View style={[styles.row, { marginBottom: 0 }]}>
+                  <View style={styles.typeSwitcher}>
+                    <TouchableOpacity onPress={() => setTipo('express')} style={[styles.typeBtn, tipo === 'express' && styles.typeBtnActive]}>
+                      <Text style={[styles.typeText, tipo === 'express' && styles.typeTextActive]}>Express (2s)</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => setTipo('full')} style={[styles.typeBtn, tipo === 'full' && styles.typeBtnActive]}>
+                      <Text style={[styles.typeText, tipo === 'full' && styles.typeTextActive]}>Full (4s)</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.priceContainer}>
+                    <DollarSign size={14} color="#D4AF37" />
+                    <TextInput style={styles.priceInput} keyboardType="numeric" value={precio} onChangeText={setPrecio} />
+                  </View>
+                </View>
+              </View>
+
+              {/* ── SECCIÓN: CANCIONES ── */}
+              <View style={styles.sectionBlock}>
+                <Text style={styles.sectionLabel}>Canciones ({canciones.length})</Text>
+                <TouchableOpacity style={styles.addSongsBtn} onPress={() => setShowSongPicker(true)}>
+                  <ListMusic size={20} color="#D4AF37" />
+                  <Text style={styles.addSongsText}>
+                    {canciones.length === 0
+                      ? 'Elegir canciones del repertorio'
+                      : `${canciones.length} canción${canciones.length !== 1 ? 'es' : ''} seleccionada${canciones.length !== 1 ? 's' : ''} — cambiar`}
+                  </Text>
+                </TouchableOpacity>
+                {canciones.length > 0 && (
+                  <View style={styles.selectedSongsPreview}>
+                    {[...canciones].sort().map((song: string, idx: number) => (
+                      <View key={idx} style={styles.songTag}>
+                        <Text style={styles.songTagText}>{song}</Text>
+                        <TouchableOpacity onPress={() => setCanciones(canciones.filter((c: string) => c !== song))}>
+                          <X size={11} color="#D4AF37" />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
 
               <TouchableOpacity style={styles.submitBtn} onPress={handleCreateOrUpdate}>
                 <Text style={styles.submitText}>{editingId ? 'GUARDAR CAMBIOS' : 'CONFIRMAR AGENDA'}</Text>
@@ -444,8 +482,40 @@ const styles = StyleSheet.create({
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 },
   modalTitle: { color: '#D4AF37', fontSize: 22, fontWeight: 'bold', letterSpacing: 0.5 },
   modalForm: { flex: 1 },
-  label: { color: '#D4AF37', fontSize: 10, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1.2, fontWeight: 'bold' },
-  input: { backgroundColor: '#1C1C1C', borderRadius: 12, padding: 15, color: '#FFF', marginBottom: 14, borderWidth: 1, borderColor: '#2A2A2A', fontSize: 15 },
+
+  // Bloques de sección del formulario
+  sectionBlock: {
+    backgroundColor: '#161616',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#252525',
+    padding: 16,
+    marginBottom: 16,
+  },
+  sectionLabel: {
+    color: '#D4AF37',
+    fontSize: 10,
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+    fontWeight: 'bold',
+    marginBottom: 14,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(212,175,55,0.15)',
+  },
+  // Cada campo individual: label arriba, input abajo
+  fieldGroup: {
+    marginBottom: 12,
+  },
+  fieldLabel: {
+    color: 'rgba(255,255,255,0.45)',
+    fontSize: 11,
+    marginBottom: 6,
+    fontWeight: '500',
+    letterSpacing: 0.3,
+  },
+
+  input: { backgroundColor: '#1C1C1C', borderRadius: 12, padding: 15, color: '#FFF', marginBottom: 0, borderWidth: 1, borderColor: '#2A2A2A', fontSize: 15 },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   typeSwitcher: { flex: 1, flexDirection: 'row', backgroundColor: '#1C1C1C', borderRadius: 12, height: 55, padding: 5, marginRight: 10 },
   typeBtn: { flex: 1, justifyContent: 'center', alignItems: 'center', borderRadius: 8 },
