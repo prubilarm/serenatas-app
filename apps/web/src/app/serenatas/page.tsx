@@ -2,19 +2,9 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Plus, 
-  Search, 
-  X, 
-  Music, 
-  CheckCircle, 
-  Loader2,
-  Calendar as CalendarIcon,
-  MapPin,
-  Clock,
-  FileText
+  Plus, Search, X, Music, CheckCircle, ChevronDown, ListMusic, MapPin, FileText
 } from 'lucide-react';
 
-// LISTA DE CANCIONES
 const LISTADO_CANCIONES = [
   "Mil puñados de oro", "Jalisco no te rajes", "Un millón de primaveras",
   "La venia bendita", "No me se rajar", "El rey", "Celos", "Mujeres divinas",
@@ -34,9 +24,9 @@ export default function SerenatasPage() {
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   
-  // Filtros de canciones
+  // Nuevo: Control del desplegable de canciones
+  const [showSongsDropdown, setShowSongsDropdown] = useState(false);
   const [songSearch, setSongSearch] = useState('');
-  const [activeLetter, setActiveLetter] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     nombre_cliente: '',
@@ -52,21 +42,7 @@ export default function SerenatasPage() {
     canciones: [] as string[]
   });
 
-  // Agrupación por letra
-  const groupedSongs = useMemo(() => {
-    const groups: Record<string, string[]> = {};
-    LISTADO_CANCIONES.forEach(s => {
-      const L = s[0].toUpperCase();
-      if (!groups[L]) groups[L] = [];
-      groups[L].push(s);
-    });
-    return groups;
-  }, []);
-
-  const letters = useMemo(() => Object.keys(groupedSongs).sort(), [groupedSongs]);
-
   const filteredSongs = useMemo(() => {
-    if (!songSearch) return null;
     return LISTADO_CANCIONES.filter(s => s.toLowerCase().includes(songSearch.toLowerCase()));
   }, [songSearch]);
 
@@ -76,7 +52,7 @@ export default function SerenatasPage() {
       const res = await fetch(`${apiUrl}/serenatas`);
       if (res.ok) {
         const data = await res.json();
-        setSerenatas(data.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+        setSerenatas(data.sort((a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()));
       }
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
@@ -103,7 +79,7 @@ export default function SerenatasPage() {
       tipo: 'express', precio_total: 25000, canciones: []
     });
     setSongSearch('');
-    setActiveLetter(null);
+    setShowSongsDropdown(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -112,17 +88,12 @@ export default function SerenatasPage() {
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api-alpha-five-25.vercel.app/api';
       const url = editingId ? `${apiUrl}/serenatas/${editingId}` : `${apiUrl}/serenatas`;
-      const res = await fetch(url, {
+      await fetch(url, {
         method: editingId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
-      if (res.ok) {
-        setShowForm(false);
-        setEditingId(null);
-        resetForm();
-        fetchData();
-      }
+      setShowForm(false); setEditingId(null); resetForm(); fetchData();
     } catch (e) { console.error(e); }
     finally { setSaving(false); }
   };
@@ -146,217 +117,208 @@ export default function SerenatasPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // ESTILOS INLINE PARA EVITAR FALLOS DE CSS/CACHE
-  const labelStyle: React.CSSProperties = {
-    display: 'block',
-    fontSize: '12px',
-    fontWeight: 'bold',
-    color: '#D4AF37',
-    textTransform: 'uppercase',
-    marginBottom: '8px',
-    letterSpacing: '1px'
+  // ESTILOS INLINE PARA MÁXIMA SEGURIDAD (ANTI-CACHE)
+  const blockStyle = { display: 'block', width: '100%' };
+  const labelStyle = { 
+    display: 'block', 
+    fontSize: '11px', 
+    fontWeight: 'bold', 
+    color: '#D4AF37', 
+    marginBottom: '10px', // Aumentado para separación total
+    letterSpacing: '1.5px',
+    textTransform: 'uppercase' as const
   };
-
-  const inputStyle: React.CSSProperties = {
+  const inputStyle = {
     width: '100%',
-    backgroundColor: '#111',
+    backgroundColor: '#151515',
     border: '1px solid #333',
-    borderRadius: '10px',
-    padding: '12px 16px',
+    borderRadius: '12px',
+    padding: '14px 18px',
     color: '#fff',
-    fontSize: '14px',
-    outline: 'none',
-    boxSizing: 'border-box'
+    fontSize: '15px',
+    outline: 'none'
   };
 
   return (
-    <div style={{ paddingBottom: '100px' }}>
-      {/* BANNER DE CONFIRMACIÓN DE VERSIÓN */}
-      <div style={{ backgroundColor: '#D4AF37', color: '#000', padding: '10px', textAlign: 'center', fontWeight: 'black', marginBottom: '30px', borderRadius: '8px', fontSize: '14px', letterSpacing: '2px' }}>
-        🚀 VERSIÓN 2.1 ACTIVADA - DISEÑO PREMIUM Y REPERTORIO POR LETRAS
-      </div>
-
+    <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-        <h1 className="hero-title" style={{ fontSize: '28px', color: '#D4AF37', margin: 0 }}>AGENDA DE SERENATAS</h1>
-        <button onClick={() => { setShowForm(!showForm); if(!showForm) resetForm(); }} className="btn-gold" style={{ cursor: 'pointer' }}>
-          {showForm ? 'CANCELAR' : 'NUEVA SERENATA'}
+        <h1 style={{ color: '#D4AF37', margin: 0, fontSize: '24px' }}>AGENDA DE PRESENTACIONES</h1>
+        <button onClick={() => { setShowForm(!showForm); if(!showForm) resetForm(); }} className="btn-gold" style={{ padding: '12px 25px' }}>
+           {showForm ? 'CANCELAR' : 'NUEVA SERENATA'}
         </button>
       </div>
 
       {showForm && (
-        <div className="glass-card" style={{ marginBottom: '40px', border: '1px solid #D4AF3744', backgroundColor: '#0A0A0A', padding: '25px', borderRadius: '20px' }}>
+        <div style={{ backgroundColor: '#111', padding: '30px', borderRadius: '24px', border: '1px solid #222', marginBottom: '40px', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
+          <h2 style={{ color: '#fff', fontSize: '18px', marginBottom: '30px', borderBottom: '1px solid #222', paddingBottom: '15px' }}>
+            {editingId ? 'EDITAR EVENTO' : 'REGISTRAR NUEVA SERENATA'}
+          </h2>
+          
           <form onSubmit={handleSubmit}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px', marginBottom: '30px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px' }}>
               
-              {/* COLUMNA 1: CLIENTE */}
-              <div style={{ backgroundColor: '#ffffff03', padding: '20px', borderRadius: '15px' }}>
-                <p style={{ ...labelStyle, fontSize: '10px', color: '#666', borderBottom: '1px solid #222', paddingBottom: '10px', marginBottom: '20px' }}>1. DATOS DEL CLIENTE</p>
-                
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={labelStyle}>Cliente que contrata</label>
-                  <input required name="nombre_cliente" value={formData.nombre_cliente} onChange={handleInputChange} style={inputStyle} placeholder="Nombre completo" />
+              {/* BLOQUE DATOS CLIENTE */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+                <div>
+                  <label style={labelStyle}>NOMBRE DEL CLIENTE (QUE CONTRATA)</label>
+                  <input required name="nombre_cliente" value={formData.nombre_cliente} onChange={handleInputChange} style={inputStyle} placeholder="Nombre y Apellido" />
                 </div>
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={labelStyle}>Teléfono contacto</label>
-                  <input required name="telefono" value={formData.telefono} onChange={handleInputChange} style={inputStyle} placeholder="+569..." />
+                <div>
+                  <label style={labelStyle}>NÚMERO DE TELÉFONO</label>
+                  <input required name="telefono" value={formData.telefono} onChange={handleInputChange} style={inputStyle} placeholder="+56 9..." />
                 </div>
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={labelStyle}>Nombre Festejada(o)</label>
-                  <input required name="nombre_festejada" value={formData.nombre_festejada} onChange={handleInputChange} style={inputStyle} placeholder="¿Para quién es?" />
+                <div>
+                  <label style={labelStyle}>A QUIÉN LE CANTAMOS (FESTEJADA/O)</label>
+                  <input required name="nombre_festejada" value={formData.nombre_festejada} onChange={handleInputChange} style={inputStyle} placeholder="Nombre de la cumpleañera/o" />
                 </div>
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={labelStyle}>Motivo</label>
-                  <input required name="motivo" value={formData.motivo} onChange={handleInputChange} style={inputStyle} placeholder="Ej. Cumpleaños" />
+                <div>
+                  <label style={labelStyle}>MOTIVO DEL EVENTO</label>
+                  <input required name="motivo" value={formData.motivo} onChange={handleInputChange} style={inputStyle} placeholder="Ej: Cumpleaños, Aniversario..." />
                 </div>
               </div>
 
-              {/* COLUMNA 2: LOGÍSTICA */}
-              <div style={{ backgroundColor: '#ffffff03', padding: '20px', borderRadius: '15px' }}>
-                <p style={{ ...labelStyle, fontSize: '10px', color: '#666', borderBottom: '1px solid #222', paddingBottom: '10px', marginBottom: '20px' }}>2. LOGÍSTICA Y PRECIO</p>
-                
-                <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
+              {/* BLOQUE LOGÍSTICA */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+                <div style={{ display: 'flex', gap: '15px' }}>
                   <div style={{ flex: 1 }}>
-                    <label style={labelStyle}>Fecha</label>
+                    <label style={labelStyle}>FECHA</label>
                     <input required type="date" name="fecha" value={formData.fecha} onChange={handleInputChange} style={inputStyle} />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <label style={labelStyle}>Hora</label>
+                    <label style={labelStyle}>HORA</label>
                     <input required type="time" name="hora" value={formData.hora} onChange={handleInputChange} style={inputStyle} />
                   </div>
                 </div>
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={labelStyle}>Dirección</label>
-                  <input required name="direccion" value={formData.direccion} onChange={handleInputChange} style={inputStyle} placeholder="Calle y número" />
+                <div>
+                  <label style={labelStyle}>DIRECCIÓN DEL EVENTO</label>
+                  <input required name="direccion" value={formData.direccion} onChange={handleInputChange} style={inputStyle} placeholder="Calle y Numero" />
                 </div>
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={labelStyle}>Comuna</label>
-                  <input required name="comuna" value={formData.comuna} onChange={handleInputChange} style={inputStyle} placeholder="Ej. Los Angeles" />
+                <div>
+                  <label style={labelStyle}>COMUNA / CIUDAD</label>
+                  <input required name="comuna" value={formData.comuna} onChange={handleInputChange} style={inputStyle} placeholder="Ej: Los Angeles" />
                 </div>
                 <div style={{ display: 'flex', gap: '15px' }}>
-                   <div style={{ flex: 1 }}>
-                     <label style={labelStyle}>Tipo</label>
-                     <select name="tipo" value={formData.tipo} onChange={handleInputChange} style={inputStyle}>
-                       <option value="express">Express (2s)</option>
-                       <option value="full">Full (4s)</option>
-                     </select>
-                   </div>
-                   <div style={{ flex: 1 }}>
-                     <label style={labelStyle}>Precio Acordado</label>
-                     <input required type="number" name="precio_total" value={formData.precio_total} onChange={handleInputChange} 
-                      style={{ ...inputStyle, textAlign: 'right', fontWeight: 'bold', color: '#D4AF37', fontSize: '18px' }} />
-                   </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={labelStyle}>TIPO SERVICIO</label>
+                    <select name="tipo" value={formData.tipo} onChange={handleInputChange} style={inputStyle}>
+                      <option value="express">Express (2 canciones)</option>
+                      <option value="full">Full (4 canciones)</option>
+                    </select>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={labelStyle}>PRECIO TOTAL ($)</label>
+                    <input required type="text" name="precio_total" value={formData.precio_total} onChange={handleInputChange} 
+                      style={{ ...inputStyle, textAlign: 'right', fontWeight: 'bold', color: '#D4AF37' }} />
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* SECTOR REPERTORIO (MEJORADO) */}
-            <div style={{ borderTop: '1px solid #222', paddingTop: '30px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '20px', flexWrap: 'wrap', gap: '15px' }}>
-                <div>
-                  <h3 style={{ ...labelStyle, fontSize: '16px', marginBottom: '4px' }}>SELECCIONAR CANCIONES</h3>
-                  <p style={{ fontSize: '11px', color: '#666', fontWeight: 'bold' }}>{formData.canciones.length} SELECCIONADAS</p>
-                </div>
-                <div style={{ position: 'relative', width: '300px' }}>
-                  <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#D4AF37' }} />
-                  <input 
-                    type="text" 
-                    placeholder="Buscar canción..." 
-                    value={songSearch} 
-                    onChange={(e) => { setSongSearch(e.target.value); if(e.target.value) setActiveLetter(null); }}
-                    style={{ ...inputStyle, paddingLeft: '40px' }}
-                  />
-                </div>
-              </div>
+            {/* SECCIÓN REPERTORIO - MENÚ DESPLEGABLE */}
+            <div style={{ marginTop: '40px', borderTop: '1px solid #222', paddingTop: '30px' }}>
+              <label style={labelStyle}>REPERTORIO DE CANCIONES ({formData.canciones.length} ELEGIDAS)</label>
+              
+              <div style={{ position: 'relative' }}>
+                {/* Botón que despliega el menú */}
+                <button 
+                  type="button" 
+                  onClick={() => setShowSongsDropdown(!showSongsDropdown)}
+                  style={{ ...inputStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+                >
+                  <span style={{ color: formData.canciones.length > 0 ? '#fff' : '#666' }}>
+                    {formData.canciones.length === 0 ? 'Presiona aquí para elegir canciones del repertorio...' : `${formData.canciones.length} canciones seleccionadas`}
+                  </span>
+                  <ChevronDown size={20} style={{ transform: showSongsDropdown ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s' }} />
+                </button>
 
-              {/* Botones de Letras */}
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '20px' }}>
-                {letters.map(L => (
-                  <button 
-                    key={L} 
-                    type="button" 
-                    onClick={() => setActiveLetter(activeLetter === L ? null : L)}
-                    style={{
-                      width: '36px', height: '36px', border: '1px solid #333', borderRadius: '8px',
-                      backgroundColor: activeLetter === L ? '#D4AF37' : '#111',
-                      color: activeLetter === L ? '#000' : '#fff',
-                      fontWeight: 'bold', cursor: 'pointer'
-                    }}
-                  >
-                    {L}
-                  </button>
-                ))}
-              </div>
-
-              {/* Lista de Canciones */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '10px', height: '240px', overflowY: 'auto', padding: '10px', backgroundColor: '#00000033', borderRadius: '12px' }}>
-                {songSearch ? (
-                  filteredSongs?.map(s => (
-                    <SongItem key={s} song={s} selected={formData.canciones.includes(s)} onToggle={() => toggleSong(s)} />
-                  ))
-                ) : activeLetter ? (
-                  groupedSongs[activeLetter].map(s => (
-                    <SongItem key={s} song={s} selected={formData.canciones.includes(s)} onToggle={() => toggleSong(s)} />
-                  ))
-                ) : (
-                  <div style={{ gridColumn: '1/-1', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#444', fontSize: '13px' }}>
-                    Selecciona una letra o usa el buscador para ver las canciones
+                {/* Menú Desplegable Real */}
+                {showSongsDropdown && (
+                  <div style={{ 
+                    position: 'absolute', top: '100%', left: 0, right: 0, 
+                    backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '12px', 
+                    marginTop: '10px', padding: '15px', zIndex: 1000, boxShadow: '0 10px 40px rgba(0,0,0,0.8)' 
+                  }}>
+                    <div style={{ position: 'relative', marginBottom: '15px' }}>
+                       <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#666' }} />
+                       <input 
+                        type="text" 
+                        placeholder="Filtrar por nombre..." 
+                        value={songSearch} 
+                        onChange={(e) => setSongSearch(e.target.value)}
+                        style={{ ...inputStyle, paddingLeft: '40px', backgroundColor: '#000' }}
+                       />
+                    </div>
+                    
+                    <div style={{ maxHeight: '250px', overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '8px' }}>
+                      {filteredSongs.map(s => {
+                        const isSel = formData.canciones.includes(s);
+                        return (
+                          <div 
+                            key={s} 
+                            onClick={() => toggleSong(s)}
+                            style={{ 
+                              padding: '10px 15px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px',
+                              backgroundColor: isSel ? '#D4AF3722' : '#ffffff05',
+                              border: isSel ? '1px solid #D4AF37' : '1px solid transparent',
+                              color: isSel ? '#D4AF37' : '#888',
+                              display: 'flex', alignItems: 'center', gap: '10px'
+                            }}
+                          >
+                            {isSel ? <CheckCircle size={14} /> : <div style={{ width: 14, height: 14, border: '1px solid #444', borderRadius: '4px' }} />}
+                            {s}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>
+
+              {/* Vista previa de seleccionadas (fuera del dropdown) */}
+              {formData.canciones.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '15px' }}>
+                  {formData.canciones.map(s => (
+                    <div key={s} style={{ backgroundColor: '#222', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #333' }}>
+                       {s} <X size={12} onClick={() => toggleSong(s)} style={{ cursor: 'pointer', color: '#ff6b6b' }} />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div style={{ marginTop: '40px', display: 'flex', justifyContent: 'flex-end', gap: '15px' }}>
-               <button type="submit" disabled={saving} className="btn-gold" style={{ padding: '15px 40px' }}>
-                 {saving ? 'GUARDANDO...' : (editingId ? 'ACTUALIZAR SERENATA' : 'CONFIRMAR AGENDAMIENTO')}
+               <button type="submit" disabled={saving} className="btn-gold" style={{ padding: '15px 50px' }}>
+                 {saving ? 'PROCESANDO...' : (editingId ? 'GUARDAR CAMBIOS' : 'AGENDAR SERENATA AHORA')}
                </button>
             </div>
           </form>
         </div>
       )}
 
-      {/* LISTADO DE SERENATAS */}
+      {/* LISTADO */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
-        {loading ? (
-           <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '50px' }}>Cargando agenda...</div>
-        ) : serenatas.map(s => (
-          <div key={s.id} className="glass-card" style={{ padding: '20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
-               <span style={{ backgroundColor: '#D4AF3722', color: '#D4AF37', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold' }}>{s.hora}</span>
-               <span style={{ color: '#666', fontSize: '11px' }}>{s.fecha}</span>
-            </div>
-            <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '5px' }}>{s.nombre_festejada}</h3>
-            <p style={{ fontSize: '11px', color: '#D4AF37', marginBottom: '15px', textTransform: 'uppercase' }}>{s.motivo}</p>
-            
-            <div style={{ marginBottom: '15px', fontSize: '13px', color: '#888' }}>
-               <div style={{ display: 'flex', gap: '8px', marginBottom: '6px' }}><MapPin size={14}/> {s.direccion}</div>
-               <div style={{ display: 'flex', gap: '8px' }}><FileText size={14}/> {s.tipo === 'full' ? 'Serenata 4 canciones' : 'Serenata Express'}</div>
-            </div>
-
-            <div style={{ borderTop: '1px solid #222', paddingTop: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-               <span style={{ fontWeight: 'bold', fontSize: '16px' }}>${s.precio_total?.toLocaleString()}</span>
-               <button onClick={() => handleEdit(s)} style={{ backgroundColor: 'transparent', border: '1px solid #333', color: '#888', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px' }}>EDITAR</button>
-            </div>
-          </div>
-        ))}
+         {!loading && serenatas.map(s => (
+           <div key={s.id} className="glass-card" style={{ padding: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                <span style={{ color: '#D4AF37', fontWeight: 'bold' }}>{s.hora}</span>
+                <span style={{ opacity: 0.4, fontSize: '12px' }}>{s.fecha}</span>
+              </div>
+              <h3 style={{ margin: '0 0 5px 0' }}>{s.nombre_festejada}</h3>
+              <p style={{ margin: 0, fontSize: '11px', color: '#666', textTransform: 'uppercase' }}>{s.motivo}</p>
+              <div style={{ margin: '15px 0', borderTop: '1px solid #222', paddingTop: '15px', color: '#888', fontSize: '13px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '5px' }}><MapPin size={14} /> {s.direccion}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Music size={14} /> {s.canciones?.length || 0} canciones</div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                 <span style={{ fontSize: '18px', fontWeight: 'bold' }}>${s.precio_total?.toLocaleString()}</span>
+                 <button onClick={() => handleEdit(s)} style={{ backgroundColor: 'transparent', border: '1px solid #333', color: '#fff', padding: '5px 12px', borderRadius: '6px', cursor: 'pointer' }}>EDITAR</button>
+              </div>
+           </div>
+         ))}
       </div>
-    </div>
-  );
-}
-
-function SongItem({ song, selected, onToggle }: any) {
-  return (
-    <div 
-      onClick={onToggle}
-      style={{
-        padding: '10px', borderRadius: '8px', border: '1px solid',
-        borderColor: selected ? '#D4AF37' : '#222',
-        backgroundColor: selected ? '#D4AF3711' : '#111',
-        cursor: 'pointer', fontSize: '11px', color: selected ? '#D4AF37' : '#999',
-        display: 'flex', alignItems: 'center', gap: '8px'
-      }}
-    >
-      {selected ? <CheckCircle size={14}/> : <div style={{ width: 14, height: 14, border: '1px solid #444', borderRadius: '4px' }}/>}
-      {song}
+      
+      {/* VERSIÓN PARA CONTROL DE DESPLIEGUE */}
+      <div style={{ position: 'fixed', bottom: 10, right: 10, fontSize: '9px', opacity: 0.1 }}>v2.5-final_dropdown</div>
     </div>
   );
 }
