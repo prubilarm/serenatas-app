@@ -4,22 +4,17 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Plus, 
   Search, 
-  Filter,
-  MoreVertical,
-  MapPin,
-  Calendar as CalendarIcon,
+  X, 
+  Music, 
+  CheckCircle, 
   Loader2,
-  Music,
-  CheckCircle,
-  X,
-  FileText,
-  Phone,
+  Calendar as CalendarIcon,
+  MapPin,
   Clock,
-  Trash2,
-  ChevronDown,
-  ChevronUp
+  FileText
 } from 'lucide-react';
 
+// LISTA DE CANCIONES
 const LISTADO_CANCIONES = [
   "Mil puñados de oro", "Jalisco no te rajes", "Un millón de primaveras",
   "La venia bendita", "No me se rajar", "El rey", "Celos", "Mujeres divinas",
@@ -32,32 +27,17 @@ const LISTADO_CANCIONES = [
   "Madrecita querida", "Mi amigo el tordillo", "Es la mujer"
 ].sort();
 
-interface Serenata {
-  id: string;
-  nombre_cliente?: string;
-  telefono?: string;
-  nombre_festejada: string;
-  motivo: string;
-  fecha: string;
-  hora: string;
-  direccion: string;
-  comuna: string;
-  tipo: string;
-  precio_total: number;
-  estado: string;
-  canciones?: string[];
-}
-
 export default function SerenatasPage() {
-  const [serenatas, setSerenatas] = useState<Serenata[]>([]);
+  const [serenatas, setSerenatas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  
+  // Filtros de canciones
   const [songSearch, setSongSearch] = useState('');
   const [activeLetter, setActiveLetter] = useState<string | null>(null);
 
-  // Form values
   const [formData, setFormData] = useState({
     nombre_cliente: '',
     telefono: '',
@@ -69,37 +49,26 @@ export default function SerenatasPage() {
     comuna: '',
     tipo: 'express',
     precio_total: 25000,
-    estado: 'pendiente' as any,
     canciones: [] as string[]
   });
 
-  const songsGrouped = useMemo(() => {
+  // Agrupación por letra
+  const groupedSongs = useMemo(() => {
     const groups: Record<string, string[]> = {};
-    LISTADO_CANCIONES.forEach(song => {
-      const firstLetter = song[0].toUpperCase();
-      if (!groups[firstLetter]) groups[firstLetter] = [];
-      groups[firstLetter].push(song);
+    LISTADO_CANCIONES.forEach(s => {
+      const L = s[0].toUpperCase();
+      if (!groups[L]) groups[L] = [];
+      groups[L].push(s);
     });
     return groups;
   }, []);
 
-  const letters = useMemo(() => Object.keys(songsGrouped).sort(), [songsGrouped]);
+  const letters = useMemo(() => Object.keys(groupedSongs).sort(), [groupedSongs]);
 
   const filteredSongs = useMemo(() => {
     if (!songSearch) return null;
-    return LISTADO_CANCIONES.filter(s => 
-      s.toLowerCase().includes(songSearch.toLowerCase())
-    );
+    return LISTADO_CANCIONES.filter(s => s.toLowerCase().includes(songSearch.toLowerCase()));
   }, [songSearch]);
-
-  useEffect(() => {
-    if (!editingId) {
-      setFormData(prev => ({ 
-        ...prev, 
-        precio_total: prev.tipo === 'express' ? 25000 : 40000 
-      }));
-    }
-  }, [formData.tipo, editingId]);
 
   const fetchData = async () => {
     try {
@@ -107,39 +76,34 @@ export default function SerenatasPage() {
       const res = await fetch(`${apiUrl}/serenatas`);
       if (res.ok) {
         const data = await res.json();
-        // Ordenar por fecha y hora
-        data.sort((a: any, b: any) => {
-          const dateA = new Date(`${a.fecha}T${a.hora}`);
-          const dateB = new Date(`${b.fecha}T${b.hora}`);
-          return dateB.getTime() - dateA.getTime();
-        });
-        setSerenatas(data);
+        setSerenatas(data.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
       }
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    } finally {
-      setLoading(false);
-    }
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = (e: any) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: name === 'precio_total' ? Number(value) : value }));
+  };
+
+  const toggleSong = (s: string) => {
     setFormData(prev => ({
       ...prev,
-      [e.target.name]: e.target.type === 'number' ? Number(e.target.value) : e.target.value
+      canciones: prev.canciones.includes(s) ? prev.canciones.filter(c => c !== s) : [...prev.canciones, s]
     }));
   };
 
-  const toggleSong = (song: string) => {
-    setFormData(prev => ({
-      ...prev,
-      canciones: prev.canciones.includes(song)
-        ? prev.canciones.filter(c => c !== song)
-        : [...prev.canciones, song]
-    }));
+  const resetForm = () => {
+    setFormData({
+      nombre_cliente: '', telefono: '', nombre_festejada: '', motivo: '',
+      fecha: '', hora: '', direccion: '', comuna: '',
+      tipo: 'express', precio_total: 25000, canciones: []
+    });
+    setSongSearch('');
+    setActiveLetter(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -148,44 +112,22 @@ export default function SerenatasPage() {
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api-alpha-five-25.vercel.app/api';
       const url = editingId ? `${apiUrl}/serenatas/${editingId}` : `${apiUrl}/serenatas`;
-      
-      // Si estamos editando, NO mandamos el estado si queremos preservarlo, 
-      // o nos aseguramos de que el formData.estado sea el correcto.
-      const payload = { ...formData };
-      if (!editingId) {
-        payload.estado = 'pendiente';
-      }
-
-      const response = await fetch(url, {
+      const res = await fetch(url, {
         method: editingId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(formData)
       });
-
-      if (response.ok) {
+      if (res.ok) {
         setShowForm(false);
         setEditingId(null);
         resetForm();
         fetchData();
       }
-    } catch (error) {
-      console.error("Error saving serenata:", error);
-    } finally {
-      setSaving(false);
-    }
+    } catch (e) { console.error(e); }
+    finally { setSaving(false); }
   };
 
-  const resetForm = () => {
-    setFormData({
-      nombre_cliente: '', telefono: '', nombre_festejada: '', motivo: '', fecha: '', 
-      hora: '', direccion: '', comuna: '', tipo: 'express', precio_total: 25000, 
-      estado: 'pendiente' as any, canciones: []
-    });
-    setSongSearch('');
-    setActiveLetter(null);
-  };
-
-  const handleEdit = (s: Serenata) => {
+  const handleEdit = (s: any) => {
     setEditingId(s.id);
     setFormData({
       nombre_cliente: s.nombre_cliente || '',
@@ -198,350 +140,218 @@ export default function SerenatasPage() {
       comuna: s.comuna,
       tipo: s.tipo,
       precio_total: s.precio_total,
-      estado: s.estado,
       canciones: s.canciones || []
     });
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const downloadPDF = (id: string) => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api-alpha-five-25.vercel.app/api';
-    window.open(`${apiUrl}/reportes/serenata/${id}`, '_blank');
+  // ESTILOS INLINE PARA EVITAR FALLOS DE CSS/CACHE
+  const labelStyle: React.CSSProperties = {
+    display: 'block',
+    fontSize: '12px',
+    fontWeight: 'bold',
+    color: '#D4AF37',
+    textTransform: 'uppercase',
+    marginBottom: '8px',
+    letterSpacing: '1px'
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    backgroundColor: '#111',
+    border: '1px solid #333',
+    borderRadius: '10px',
+    padding: '12px 16px',
+    color: '#fff',
+    fontSize: '14px',
+    outline: 'none',
+    boxSizing: 'border-box'
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-20">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-        <div>
-          <h1 className="hero-title text-3xl md:text-4xl font-bold gold-gradient-text tracking-tighter uppercase">Agenda de Presentaciones</h1>
-          <p className="text-white/40 mt-2 font-medium">Gestiona tus eventos en tiempo real.</p>
-        </div>
-        <button 
-          onClick={() => { setShowForm(!showForm); if(!showForm) resetForm(); }}
-          className="btn-gold flex items-center gap-2 w-full md:w-auto justify-center"
-        >
-          <Plus size={20} /> Nueva Serenata
+    <div style={{ paddingBottom: '100px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+        <h1 className="hero-title" style={{ fontSize: '28px', color: '#D4AF37' }}>AGENDA DE SERENATAS</h1>
+        <button onClick={() => { setShowForm(!showForm); if(!showForm) resetForm(); }} className="btn-gold">
+          {showForm ? 'CANCELAR' : 'NUEVA SERENATA'}
         </button>
       </div>
 
       {showForm && (
-        <div className="glass-card mb-8 animate-in slide-in-from-top-4 border-[var(--accent-gold)]/20 shadow-[0_0_50px_rgba(212,175,55,0.05)]">
-          <div className="flex justify-between items-center mb-8 border-b border-white/5 pb-4">
-            <h2 className="text-xl font-bold text-[var(--accent-gold)] uppercase tracking-wider">
-              {editingId ? 'Modificar Serenata' : 'Agendar Serenata'}
-            </h2>
-            <button onClick={() => { setShowForm(false); setEditingId(null); }} className="text-white/30 hover:text-white"><X size={20}/></button>
-          </div>
-          
-          <form onSubmit={handleSubmit} className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6">
-              {/* Sección Cliente */}
-              <div className="space-y-8 bg-white/[0.02] p-8 rounded-3xl border border-white/5 shadow-xl">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-1.5 h-6 bg-[var(--accent-gold)] rounded-full"></div>
-                  <span className="text-xs font-black uppercase text-[var(--accent-gold)] tracking-[0.3em]">1. Datos del Cliente</span>
+        <div className="glass-card" style={{ marginBottom: '40px', border: '1px solid #D4AF3733' }}>
+          <form onSubmit={handleSubmit}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px', marginBottom: '30px' }}>
+              
+              {/* COLUMNA 1: CLIENTE */}
+              <div style={{ backgroundColor: '#ffffff03', padding: '20px', borderRadius: '15px' }}>
+                <p style={{ ...labelStyle, fontSize: '10px', color: '#666', borderBottom: '1px solid #222', paddingBottom: '10px', marginBottom: '20px' }}>1. DATOS DEL CLIENTE</p>
+                
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={labelStyle}>Cliente que contrata</label>
+                  <input required name="nombre_cliente" value={formData.nombre_cliente} onChange={handleInputChange} style={inputStyle} placeholder="Nombre completo" />
                 </div>
-                <div className="space-y-2">
-                  <label className="label-text !mb-3">Nombre del Cliente (Contratante)</label>
-                  <input required type="text" name="nombre_cliente" onChange={handleInputChange} value={formData.nombre_cliente} className="input-field" placeholder="Nombre completo" />
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={labelStyle}>Teléfono contacto</label>
+                  <input required name="telefono" value={formData.telefono} onChange={handleInputChange} style={inputStyle} placeholder="+569..." />
                 </div>
-                <div className="space-y-2">
-                  <label className="label-text !mb-3">Teléfono de contacto</label>
-                  <input required type="text" name="telefono" onChange={handleInputChange} value={formData.telefono} className="input-field" placeholder="+569 1234 5678" />
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={labelStyle}>Nombre Festejada(o)</label>
+                  <input required name="nombre_festejada" value={formData.nombre_festejada} onChange={handleInputChange} style={inputStyle} placeholder="¿Para quién es?" />
                 </div>
-                <div className="space-y-2">
-                  <label className="label-text !mb-3">Nombre de la Festejada(o)</label>
-                  <input required type="text" name="nombre_festejada" onChange={handleInputChange} value={formData.nombre_festejada} className="input-field" placeholder="¿Para quién es la sorpresa?" />
-                </div>
-                <div className="space-y-2">
-                  <label className="label-text !mb-3">Motivo o Evento Especial</label>
-                  <input required type="text" name="motivo" onChange={handleInputChange} value={formData.motivo} className="input-field" placeholder="Ej. Cumpleaños, Bodas de Oro..." />
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={labelStyle}>Motivo</label>
+                  <input required name="motivo" value={formData.motivo} onChange={handleInputChange} style={inputStyle} placeholder="Ej. Cumpleaños" />
                 </div>
               </div>
 
-              {/* Sección Logística */}
-              <div className="space-y-8 bg-white/[0.02] p-8 rounded-3xl border border-white/5 shadow-xl">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-1.5 h-6 bg-[var(--accent-gold)] rounded-full"></div>
-                  <span className="text-xs font-black uppercase text-[var(--accent-gold)] tracking-[0.3em]">2. Ubicación y Horario</span>
-                </div>
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="label-text !mb-3">Fecha del Evento</label>
-                    <input required type="date" name="fecha" onChange={handleInputChange} value={formData.fecha} className="input-field" />
+              {/* COLUMNA 2: LOGÍSTICA */}
+              <div style={{ backgroundColor: '#ffffff03', padding: '20px', borderRadius: '15px' }}>
+                <p style={{ ...labelStyle, fontSize: '10px', color: '#666', borderBottom: '1px solid #222', paddingBottom: '10px', marginBottom: '20px' }}>2. LOGÍSTICA Y PRECIO</p>
+                
+                <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={labelStyle}>Fecha</label>
+                    <input required type="date" name="fecha" value={formData.fecha} onChange={handleInputChange} style={inputStyle} />
                   </div>
-                  <div className="space-y-2">
-                    <label className="label-text !mb-3">Hora de llegada</label>
-                    <input required type="time" name="hora" onChange={handleInputChange} value={formData.hora} className="input-field" />
+                  <div style={{ flex: 1 }}>
+                    <label style={labelStyle}>Hora</label>
+                    <input required type="time" name="hora" value={formData.hora} onChange={handleInputChange} style={inputStyle} />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="label-text !mb-3">Dirección Completa</label>
-                  <input required type="text" name="direccion" onChange={handleInputChange} value={formData.direccion} className="input-field" placeholder="Calle, número, depto o referencia" />
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={labelStyle}>Dirección</label>
+                  <input required name="direccion" value={formData.direccion} onChange={handleInputChange} style={inputStyle} placeholder="Calle y número" />
                 </div>
-                <div className="space-y-2">
-                  <label className="label-text !mb-3">Comuna / Ciudad</label>
-                  <input required type="text" name="comuna" onChange={handleInputChange} value={formData.comuna} className="input-field" placeholder="Donde se realizará" />
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={labelStyle}>Comuna</label>
+                  <input required name="comuna" value={formData.comuna} onChange={handleInputChange} style={inputStyle} placeholder="Ej. Los Angeles" />
                 </div>
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="label-text !mb-3">Modalidad</label>
-                    <select name="tipo" onChange={handleInputChange} value={formData.tipo} className="input-field appearance-none bg-black">
-                      <option value="express">Express (2s)</option>
-                      <option value="full">Full (4s)</option>
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="label-text !mb-3">Precio Acordado ($)</label>
-                    <input required type="number" name="precio_total" onChange={handleInputChange} value={formData.precio_total} className="input-field font-black text-[var(--accent-gold)] text-xl text-right" />
-                  </div>
+                <div style={{ display: 'flex', gap: '15px' }}>
+                   <div style={{ flex: 1 }}>
+                     <label style={labelStyle}>Tipo</label>
+                     <select name="tipo" value={formData.tipo} onChange={handleInputChange} style={inputStyle}>
+                       <option value="express">Express (2s)</option>
+                       <option value="full">Full (4s)</option>
+                     </select>
+                   </div>
+                   <div style={{ flex: 1 }}>
+                     <label style={labelStyle}>Precio Acordado</label>
+                     <input required type="number" name="precio_total" value={formData.precio_total} onChange={handleInputChange} 
+                      style={{ ...inputStyle, textAlign: 'right', fontWeight: 'bold', color: '#D4AF37', fontSize: '18px' }} />
+                   </div>
                 </div>
               </div>
             </div>
 
-            {/* SECTOR REPERTORIO */}
-            <div className="border-t border-white/5 pt-8">
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+            {/* SECTOR REPERTORIO (MEJORADO) */}
+            <div style={{ borderTop: '1px solid #222', paddingTop: '30px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '20px', flexWrap: 'wrap', gap: '15px' }}>
                 <div>
-                   <label className="label-text !mb-1 text-white uppercase tracking-widest text-base">Seleccionar Repertorio</label>
-                   <p className="text-[10px] text-white/30 font-bold uppercase tracking-wider">{formData.canciones.length} canciones seleccionadas</p>
+                  <h3 style={{ ...labelStyle, fontSize: '16px', marginBottom: '4px' }}>SELECCIONAR CANCIONES</h3>
+                  <p style={{ fontSize: '11px', color: '#666', fontWeight: 'bold' }}>{formData.canciones.length} SELECCIONADAS</p>
                 </div>
-                <div className="relative w-full md:w-72">
-                   <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
-                   <input 
+                <div style={{ position: 'relative', width: '300px' }}>
+                  <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#D4AF37' }} />
+                  <input 
                     type="text" 
                     placeholder="Buscar canción..." 
-                    value={songSearch}
-                    onChange={(e) => {
-                      setSongSearch(e.target.value);
-                      if (e.target.value) setActiveLetter(null);
-                    }}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm text-white focus:border-[var(--accent-gold)] outline-none transition-all" 
-                   />
+                    value={songSearch} 
+                    onChange={(e) => { setSongSearch(e.target.value); if(e.target.value) setActiveLetter(null); }}
+                    style={{ ...inputStyle, paddingLeft: '40px' }}
+                  />
                 </div>
               </div>
 
-              {/* Vista de búsqueda */}
-              {songSearch ? (
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 min-h-[100px] max-h-[300px] overflow-y-auto pr-2 custom-scrollbar p-1">
-                  {filteredSongs && filteredSongs.length > 0 ? (
-                    filteredSongs.map(song => (
-                        <SongButton key={song} song={song} isSelected={formData.canciones.includes(song)} onClick={() => toggleSong(song)} />
-                    ))
-                  ) : (
-                    <div className="col-span-full py-8 text-center text-white/20 italic text-sm">No se encontraron canciones con "{songSearch}"</div>
-                  )}
-                </div>
-              ) : (
-                /* Vista Alfabética */
-                <div className="space-y-3">
-                   <div className="flex flex-wrap gap-1.5 pb-2">
-                     {letters.map(letter => (
-                       <button
-                        key={letter}
-                        type="button"
-                        onClick={() => setActiveLetter(activeLetter === letter ? null : letter)}
-                        className={`w-9 h-9 text-sm font-bold rounded-lg border transition-all flex items-center justify-center ${
-                          activeLetter === letter 
-                            ? 'bg-[var(--accent-gold)] border-[var(--accent-gold)] text-black' 
-                            : 'bg-white/5 border-white/10 text-white/40 hover:border-white/30'
-                        }`}
-                       >
-                         {letter}
-                       </button>
-                     ))}
-                   </div>
-                   
-                   {activeLetter && (
-                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 animate-in fade-in slide-in-from-top-1 duration-300">
-                        {songsGrouped[activeLetter].map(song => (
-                           <SongButton key={song} song={song} isSelected={formData.canciones.includes(song)} onClick={() => toggleSong(song)} />
-                        ))}
-                      </div>
-                   )}
-                </div>
-              )}
+              {/* Botones de Letras */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '20px' }}>
+                {letters.map(L => (
+                  <button 
+                    key={L} 
+                    type="button" 
+                    onClick={() => setActiveLetter(activeLetter === L ? null : L)}
+                    style={{
+                      width: '36px', height: '36px', border: '1px solid #333', borderRadius: '8px',
+                      backgroundColor: activeLetter === L ? '#D4AF37' : '#111',
+                      color: activeLetter === L ? '#000' : '#fff',
+                      fontWeight: 'bold', cursor: 'pointer'
+                    }}
+                  >
+                    {L}
+                  </button>
+                ))}
+              </div>
 
-              {/* Preview de seleccionadas si no hay nada activo */}
-              {!activeLetter && !songSearch && formData.canciones.length > 0 && (
-                <div className="mt-6 p-4 bg-[var(--accent-gold)]/5 rounded-xl border border-[var(--accent-gold)]/20">
-                  <p className="text-[10px] font-black uppercase text-[var(--accent-gold)] mb-3 tracking-widest flex items-center gap-2">
-                    <Music size={12} /> Tu Selección para este evento:
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {formData.canciones.map(song => (
-                      <div key={song} className="bg-black/40 px-3 py-1.5 rounded-lg border border-[var(--accent-gold)]/30 flex items-center gap-2">
-                        <span className="text-xs text-white/90 font-medium">{song}</span>
-                        <button type="button" onClick={() => toggleSong(song)} className="text-[var(--accent-gold)] hover:text-white"><X size={12}/></button>
-                      </div>
-                    ))}
+              {/* Lista de Canciones */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '10px', height: '240px', overflowY: 'auto', padding: '10px', backgroundColor: '#00000033', borderRadius: '12px' }}>
+                {songSearch ? (
+                  filteredSongs?.map(s => (
+                    <SongItem key={s} song={s} selected={formData.canciones.includes(s)} onToggle={() => toggleSong(s)} />
+                  ))
+                ) : activeLetter ? (
+                  groupedSongs[activeLetter].map(s => (
+                    <SongItem key={s} song={s} selected={formData.canciones.includes(s)} onToggle={() => toggleSong(s)} />
+                  ))
+                ) : (
+                  <div style={{ gridColumn: '1/-1', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#444', fontSize: '13px' }}>
+                    Selecciona una letra o usa el buscador para ver las canciones
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
-            <div className="flex flex-col md:flex-row justify-end gap-3 pt-8 border-t border-white/5">
-              <button 
-                type="button" 
-                onClick={() => { setShowForm(false); setEditingId(null); }} 
-                className="px-8 py-3 rounded-xl border border-white/10 text-white/60 hover:text-white hover:bg-white/5 font-bold text-xs uppercase tracking-widest transition-all order-2 md:order-1"
-              >
-                DESCARTAR
-              </button>
-              <button 
-                type="submit" 
-                disabled={saving} 
-                className="btn-gold flex items-center justify-center gap-3 px-12 py-3 order-1 md:order-2"
-              >
-                {saving ? (
-                  <> <Loader2 size={18} className="animate-spin" /> PROCESANDO... </>
-                ) : (
-                  <> <CheckCircle size={18} /> {editingId ? 'GUARDAR ACTUALIZACIÓN' : 'CONFIRMAR Y AGENDAR'} </>
-                )}
-              </button>
+            <div style={{ marginTop: '40px', display: 'flex', justifyContent: 'flex-end', gap: '15px' }}>
+               <button type="submit" disabled={saving} className="btn-gold" style={{ padding: '15px 40px' }}>
+                 {saving ? 'GUARDANDO...' : (editingId ? 'ACTUALIZAR SERENATA' : 'CONFIRMAR AGENDAMIENTO')}
+               </button>
             </div>
           </form>
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      {/* LISTADO DE SERENATAS */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
         {loading ? (
-          <div className="col-span-full py-20 flex flex-col items-center justify-center gap-4">
-            <Loader2 className="animate-spin text-[var(--accent-gold)]" size={48} />
-            <p className="text-white/30 uppercase tracking-[0.3em] font-black text-xs">Cargando Agenda...</p>
-          </div>
-        ) : serenatas.length === 0 ? (
-          <div className="col-span-full py-20 text-center">
-             <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/10">
-               <Music size={32} className="text-white/20" />
-             </div>
-             <p className="text-white/40 font-medium">No hay eventos registrados en la base de datos.</p>
-          </div>
-        ) : (
-          serenatas.map((item) => (
-            <div key={item.id} className="glass-card hover:border-[var(--accent-gold)]/40 transition-all group overflow-hidden flex flex-col h-full relative">
-              {/* Badge de Estado */}
-              <div className="absolute top-0 right-0">
-                <div className={`px-4 py-1 text-[9px] font-black uppercase tracking-widest rounded-bl-xl ${
-                  item.estado === 'completada' ? 'bg-emerald-500/20 text-emerald-400' : 
-                  item.estado === 'pendiente' ? 'bg-amber-500/20 text-amber-400' : 'bg-blue-500/20 text-blue-400'
-                }`}>
-                  {item.estado}
-                </div>
-              </div>
-
-              <div className="mb-6">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-12 h-12 bg-white/5 rounded-2xl flex flex-col items-center justify-center border border-white/5 group-hover:border-[var(--accent-gold)]/30 transition-all">
-                    <span className="text-[10px] font-black text-white/40 uppercase">HRS</span>
-                    <span className="text-sm font-black text-[var(--accent-gold)] leading-none">{item.hora.slice(0, 5)}</span>
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-white group-hover:text-[var(--accent-gold)] transition-colors leading-tight">{item.nombre_festejada}</h3>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-white/30 mt-1">{item.motivo}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-3 mb-8 flex-1">
-                <div className="flex items-start gap-3 text-sm text-white/60">
-                  <MapPin size={16} className="text-[var(--accent-gold)]/50 mt-0.5 flex-shrink-0" /> 
-                  <span className="font-medium leading-tight">{item.direccion}, <span className="text-white/30">{item.comuna}</span></span>
-                </div>
-                <div className="flex items-center gap-3 text-sm text-white/60">
-                  <CalendarIcon size={16} className="text-[var(--accent-gold)]/50 flex-shrink-0" />
-                  <span className="font-bold text-white/80">{item.fecha}</span>
-                </div>
-                {item.nombre_cliente && (
-                   <div className="flex items-center gap-3 text-sm text-white/60">
-                      <UsersIcon size={16} className="text-[var(--accent-gold)]/50 flex-shrink-0" />
-                      <span>{item.nombre_cliente} <span className="text-[10px] opacity-30 tracking-tighter">({item.telefono})</span></span>
-                   </div>
-                )}
-              </div>
-
-              {item.canciones && item.canciones.length > 0 && (
-                <div className="bg-black/40 rounded-xl p-4 mb-6 border border-white/5 group-hover:bg-black/60 transition-all">
-                   <div className="text-[8px] uppercase font-black text-white/20 mb-3 tracking-[0.2em] flex items-center gap-2">
-                      <div className="w-3 h-[1px] bg-white/10"></div> REPERTORIO
-                   </div>
-                   <div className="flex flex-wrap gap-1.5">
-                      {item.canciones.slice(0, 4).map((c, i) => (
-                        <span key={i} className="text-[9px] px-2 py-1 bg-white/5 rounded-md text-white/50 border border-white/5 font-medium whitespace-nowrap">
-                          {c}
-                        </span>
-                      ))}
-                      {item.canciones.length > 4 && (
-                        <span className="text-[9px] px-2 py-1 bg-white/5 rounded-md text-white/30 border border-white/5 font-black">
-                          +{item.canciones.length - 4} MÁS
-                        </span>
-                      )}
-                   </div>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between border-t border-white/5 pt-5 mt-auto">
-                 <div>
-                    <span className="text-[9px] font-black text-white/20 uppercase tracking-widest block mb-0.5">Total Acordado</span>
-                    <span className="text-xl font-black text-white">${item.precio_total?.toLocaleString()}</span>
-                 </div>
-                 <div className="flex gap-2">
-                    <button 
-                      onClick={() => downloadPDF(item.id)} 
-                      className="w-10 h-10 flex items-center justify-center bg-white/5 hover:bg-red-500/10 rounded-xl text-white/40 hover:text-red-400 border border-white/5 transition-all" 
-                      title="Ver Comprobante PDF"
-                    >
-                       <FileText size={18} />
-                    </button>
-                    <button 
-                      onClick={() => handleEdit(item)} 
-                      className="w-10 h-10 flex items-center justify-center bg-white/5 hover:bg-blue-500/10 rounded-xl text-white/40 hover:text-blue-400 border border-white/5 transition-all"
-                      title="Editar Serenata"
-                    >
-                       <Edit3 size={18} />
-                    </button>
-                 </div>
-              </div>
+           <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '50px' }}>Cargando agenda...</div>
+        ) : serenatas.map(s => (
+          <div key={s.id} className="glass-card" style={{ padding: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
+               <span style={{ backgroundColor: '#D4AF3722', color: '#D4AF37', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold' }}>{s.hora}</span>
+               <span style={{ color: '#666', fontSize: '11px' }}>{s.fecha}</span>
             </div>
-          ))
-        )}
+            <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '5px' }}>{s.nombre_festejada}</h3>
+            <p style={{ fontSize: '11px', color: '#D4AF37', marginBottom: '15px', textTransform: 'uppercase' }}>{s.motivo}</p>
+            
+            <div style={{ marginBottom: '15px', fontSize: '13px', color: '#888' }}>
+               <div style={{ display: 'flex', gap: '8px', marginBottom: '6px' }}><MapPin size={14}/> {s.direccion}</div>
+               <div style={{ display: 'flex', gap: '8px' }}><FileText size={14}/> {s.tipo === 'full' ? 'Serenata 4 canciones' : 'Serenata Express'}</div>
+            </div>
+
+            <div style={{ borderTop: '1px solid #222', paddingTop: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+               <span style={{ fontWeight: 'bold', fontSize: '16px' }}>${s.precio_total?.toLocaleString()}</span>
+               <button onClick={() => handleEdit(s)} style={{ backgroundColor: 'transparent', border: '1px solid #333', color: '#888', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px' }}>EDITAR</button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
-// ── COMPONENTES AUXILIARES ──
-
-function SongButton({ song, isSelected, onClick }: { song: string, isSelected: boolean, onClick: () => void }) {
+function SongItem({ song, selected, onToggle }: any) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`px-3 py-2 text-[11px] rounded-xl border text-left flex items-center justify-between transition-all group/btn ${
-        isSelected
-          ? 'bg-[var(--accent-gold)] border-[var(--accent-gold)] text-black font-bold shadow-[0_4px_12px_rgba(212,175,55,0.2)]'
-          : 'bg-white/5 border-white/10 text-white/60 hover:border-white/30 hover:bg-white/10'
-      }`}
+    <div 
+      onClick={onToggle}
+      style={{
+        padding: '10px', borderRadius: '8px', border: '1px solid',
+        borderColor: selected ? '#D4AF37' : '#222',
+        backgroundColor: selected ? '#D4AF3711' : '#111',
+        cursor: 'pointer', fontSize: '11px', color: selected ? '#D4AF37' : '#999',
+        display: 'flex', alignItems: 'center', gap: '8px'
+      }}
     >
-      <span className="truncate flex-1">{song}</span>
-      {isSelected ? <CheckCircle size={12} /> : <Plus size={10} className="text-white/20 group-hover/btn:text-white/60" />}
-    </button>
-  );
-}
-
-function UsersIcon({ size, className }: { size: number, className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-    </svg>
-  );
-}
-
-function Edit3({ size, className }: { size: number, className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-    </svg>
+      {selected ? <CheckCircle size={14}/> : <div style={{ width: 14, height: 14, border: '1px solid #444', borderRadius: '4px' }}/>}
+      {song}
+    </div>
   );
 }
