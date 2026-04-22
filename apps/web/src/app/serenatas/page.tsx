@@ -1,5 +1,8 @@
 "use client";
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Plus, Search, X, Music, CheckCircle, ChevronDown, MapPin, FileText } from 'lucide-react';
 
@@ -37,7 +40,7 @@ export default function SerenatasPage() {
   const fetchData = async () => {
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api-alpha-five-25.vercel.app/api';
-      const res = await fetch(`${apiUrl}/serenatas`);
+      const res = await fetch(`${apiUrl}/serenatas`, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         setSerenatas(data.sort((a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()));
@@ -105,159 +108,108 @@ export default function SerenatasPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // ESTILOS DE EMERGENCIA TOTAL (PARA QUE NO HAYA DUDA)
-  const containerStyle = { padding: '20px', maxWidth: '1200px', margin: '0 auto', fontFamily: 'sans-serif' };
-  const labelStyle = { display: 'block', fontSize: '13px', fontWeight: '800', color: '#D4AF37', marginBottom: '15px', textTransform: 'uppercase' as const };
-  const inputStyle = { width: '100%', backgroundColor: '#000', border: '2px solid #D4AF37', borderRadius: '15px', padding: '16px', color: '#fff', fontSize: '16px' };
+  // ESTILOS DE EMERGENCIA TOTAL v5.0
+  const containerStyle: React.CSSProperties = { padding: '20px', maxWidth: '1200px', margin: '0 auto', minHeight: '100vh', background: '#0a0a0a' };
+  const labelStyle: React.CSSProperties = { display: 'block', paddingBottom: '12px', fontSize: '13px', fontWeight: 'bold', color: '#D4AF37' };
+  const inputStyle: React.CSSProperties = { display: 'block', width: '100%', padding: '16px', borderRadius: '12px', background: '#000', border: '1px solid #444', color: '#fff' };
 
   return (
     <div style={containerStyle}>
-      {/* BANNER INCONFUNDIBLE */}
-      <div style={{ backgroundColor: '#D4AF37', color: '#000', padding: '20px', textAlign: 'center', fontWeight: '900', borderRadius: '20px', border: '4px solid #fff', marginBottom: '40px', fontSize: '24px' }}>
-        💎 VERSIÓN 4.0 - SISTEMA ACTUALIZADO 💎
+      <div style={{ backgroundColor: '#ff0000', color: '#fff', padding: '15px', fontWeight: 'bold', textAlign: 'center', marginBottom: '20px' }}>
+        🚩 VERSÍON 5.0 - REBELDÍA TÉCNICA - SI VES ESTO, SE ACTUALIZÓ 🚩
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-        <h1 style={{ color: '#D4AF37', fontSize: '32px', margin: 0 }}>PRESENTACIONES</h1>
-        <button onClick={() => { setShowForm(!showForm); if(!showForm) resetForm(); }} className="btn-gold" style={{ padding: '15px 30px' }}>
-          {showForm ? 'VOLVER ATRÁS' : 'AGENDAR AHORA'}
+        <h1 style={{ color: '#D4AF37', margin: 0, fontSize: '24px' }}>GESTIÓN DE SERENATAS</h1>
+        <button onClick={() => { setShowForm(!showForm); if(!showForm) resetForm(); }} className="btn-gold" style={{ cursor: 'pointer' }}>
+           {showForm ? 'OCULTAR' : 'REGISTRAR'}
         </button>
       </div>
 
       {showForm && (
-        <div style={{ backgroundColor: '#000', padding: '40px', borderRadius: '30px', border: '1px solid #D4AF37', marginBottom: '50px' }}>
-          <form onSubmit={handleSubmit}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '40px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
-                <div>
-                   <label style={labelStyle}>Cliente Contratante (Nombre)</label>
-                   <input required name="nombre_cliente" value={formData.nombre_cliente} onChange={handleInputChange} style={inputStyle} placeholder="Escribe el nombre aquí..." />
-                </div>
-                <div>
-                   <label style={labelStyle}>Teléfono de la persona</label>
-                   <input required name="telefono" value={formData.telefono} onChange={handleInputChange} style={inputStyle} placeholder="+569..." />
-                </div>
-                <div>
-                   <label style={labelStyle}>Nombre de quien recibe la serenata</label>
-                   <input required name="nombre_festejada" value={formData.nombre_festejada} onChange={handleInputChange} style={inputStyle} placeholder="Nombre completo" />
-                </div>
-                <div>
-                   <label style={labelStyle}>Evento o Motivo</label>
-                   <input required name="motivo" value={formData.motivo} onChange={handleInputChange} style={inputStyle} placeholder="Ej. Boda" />
-                </div>
-              </div>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
-                 <div style={{ display: 'flex', gap: '20px' }}>
-                    <div style={{ flex: 1 }}>
-                       <label style={labelStyle}>Día</label>
-                       <input required type="date" name="fecha" value={formData.fecha} onChange={handleInputChange} style={inputStyle} />
+        <div style={{ background: '#111', padding: '30px', borderRadius: '20px', border: '1px solid #333', marginBottom: '40px' }}>
+           <form onSubmit={handleSubmit}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px' }}>
+                 <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+                    <div>
+                       <label style={labelStyle}>Cliente Contratante</label>
+                       <input name="nombre_cliente" value={formData.nombre_cliente} onChange={handleInputChange} style={inputStyle} placeholder="Nombre completo" required />
                     </div>
-                    <div style={{ flex: 1 }}>
-                       <label style={labelStyle}>Hora exacta</label>
-                       <input required type="time" name="hora" value={formData.hora} onChange={handleInputChange} style={inputStyle} />
+                    <div>
+                       <label style={labelStyle}>Móvil/Teléfono</label>
+                       <input name="telefono" value={formData.telefono} onChange={handleInputChange} style={inputStyle} placeholder="+569..." required />
+                    </div>
+                    <div>
+                       <label style={labelStyle}>Nombre de quien recibe</label>
+                       <input name="nombre_festejada" value={formData.nombre_festejada} onChange={handleInputChange} style={inputStyle} placeholder="Nombre festeja" required />
                     </div>
                  </div>
-                 <div>
-                    <label style={labelStyle}>Lugar (Dirección)</label>
-                    <input required name="direccion" value={formData.direccion} onChange={handleInputChange} style={inputStyle} placeholder="Calle y número" />
-                 </div>
-                 <div>
-                    <label style={labelStyle}>Ciudad / Comuna</label>
-                    <input required name="comuna" value={formData.comuna} onChange={handleInputChange} style={inputStyle} placeholder="Ej. Temuco" />
-                 </div>
-                 <div style={{ display: 'flex', gap: '20px' }}>
-                    <div style={{ flex: 1 }}>
-                       <label style={labelStyle}>Servicio</label>
-                       <select name="tipo" value={formData.tipo} onChange={handleInputChange} style={inputStyle}>
-                          <option value="express">Express (2s)</option>
-                          <option value="full">Full (4s)</option>
-                       </select>
+
+                 <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+                    <div style={{ display: 'flex', gap: '15px' }}>
+                        <div style={{ flex: 1 }}>
+                          <label style={labelStyle}>Día</label>
+                          <input type="date" name="fecha" value={formData.fecha} onChange={handleInputChange} style={inputStyle} required />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <label style={labelStyle}>Hora</label>
+                          <input type="time" name="hora" value={formData.hora} onChange={handleInputChange} style={inputStyle} required />
+                        </div>
                     </div>
-                    <div style={{ flex: 1 }}>
-                       <label style={labelStyle}>Valor Acordado ($)</label>
-                       <input required name="precio_total" value={formData.precio_total} onChange={handleInputChange} style={{ ...inputStyle, textAlign: 'right', color: '#D4AF37', fontWeight: 'bold' }} />
+                    <div>
+                       <label style={labelStyle}>Lugar del evento</label>
+                       <input name="direccion" value={formData.direccion} onChange={handleInputChange} style={inputStyle} placeholder="Dirección precisa" required />
                     </div>
                  </div>
               </div>
-            </div>
 
-            {/* REPERTORIO DESPLEGABLE (SOLICITUD DEL USUARIO) */}
-            <div style={{ marginTop: '50px', borderTop: '2px solid #D4AF37', paddingTop: '40px' }}>
-               <label style={labelStyle}>CANCIONES DEL REPERTORIO ({formData.canciones.length} SELECCIONADAS)</label>
-               
-               <div style={{ position: 'relative' }}>
-                  <button 
-                    type="button" 
-                    onClick={() => setShowSongsDropdown(!showSongsDropdown)}
-                    style={{ ...inputStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-                  >
-                    <span>{formData.canciones.length === 0 ? '-- HAZ CLIC AQUÍ PARA DESPLEGAR CANCIONES --' : `${formData.canciones.length} canciones elegidas`}</span>
-                    <ChevronDown size={24} style={{ transform: showSongsDropdown ? 'rotate(180deg)' : 'none', transition: '0.3s' }} />
-                  </button>
-
-                  {showSongsDropdown && (
-                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, backgroundColor: '#111', border: '2px solid #D4AF37', borderRadius: '20px', padding: '20px', zIndex: 9999, marginTop: '10px', boxShadow: '0 30px 60px rgba(0,0,0,0.9)' }}>
-                       <div style={{ position: 'relative', marginBottom: '20px' }}>
-                          <Search size={20} style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: '#666' }} />
-                          <input type="text" placeholder="Buscar por nombre..." value={songSearch} onChange={(e) => setSongSearch(e.target.value)} style={{ ...inputStyle, paddingLeft: '50px', backgroundColor: '#000', fontSize: '14px' }} />
-                       </div>
-                       <div style={{ maxHeight: '300px', overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '10px' }}>
-                          {filteredSongs.map(s => {
-                            const isSelected = formData.canciones.includes(s);
-                            return (
-                              <div key={s} onClick={() => toggleSong(s)} style={{ padding: '12px', borderRadius: '10px', backgroundColor: isSelected ? '#D4AF3733' : '#ffffff05', color: isSelected ? '#D4AF37' : '#999', border: isSelected ? '1px solid #D4AF37' : '1px solid #333', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px' }}>
-                                {isSelected ? <CheckCircle size={16} /> : <div style={{ width: 16, height: 16, border: '1px solid #444', borderRadius: '4px' }} />}
-                                {s}
-                              </div>
-                            );
-                          })}
-                       </div>
+              {/* DROPDOWN REAL DE CANCIONES */}
+              <div style={{ marginTop: '30px', borderTop: '1px solid #222', paddingTop: '30px' }}>
+                 <label style={labelStyle}>ELECCIÓN DE CANCIONES ({formData.canciones.length})</label>
+                 <div style={{ position: 'relative' }}>
+                    <div 
+                      onClick={() => setShowSongsDropdown(!showSongsDropdown)}
+                      style={{ ...inputStyle, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                    >
+                       <span>{formData.canciones.length === 0 ? '--- HACER CLIC PARA DESPLEGAR EL REPERTORIO ---' : `${formData.canciones.length} seleccionadas`}</span>
+                       <ChevronDown size={18} />
                     </div>
-                  )}
-               </div>
 
-               {/* Pre-visualización rápida */}
-               {formData.canciones.length > 0 && (
-                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '20px' }}>
-                    {formData.canciones.map(s => (
-                      <div key={s} style={{ backgroundColor: '#D4AF3711', border: '1px solid #D4AF37', padding: '8px 15px', borderRadius: '10px', fontSize: '12px', color: '#fff', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        {s} <X size={14} onClick={() => toggleSong(s)} style={{ cursor: 'pointer', color: '#D4AF37' }} />
+                    {showSongsDropdown && (
+                      <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#1a1a1a', border: '1px solid #444', borderRadius: '15px', padding: '15px', zIndex: 100, marginTop: '5px' }}>
+                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '8px', maxHeight: '250px', overflowY: 'auto' }}>
+                            {LISTADO_CANCIONES.map(s => {
+                              const isSel = formData.canciones.includes(s);
+                              return (
+                                <div key={s} onClick={() => toggleSong(s)} style={{ padding: '8px', borderRadius: '8px', background: isSel ? '#D4AF37' : '#222', color: isSel ? '#000' : '#888', cursor: 'pointer', fontSize: '12px', fontWeight: isSel ? 'bold' : 'normal' }}>
+                                   {s}
+                                </div>
+                              );
+                            })}
+                         </div>
                       </div>
-                    ))}
+                    )}
                  </div>
-               )}
-            </div>
+              </div>
 
-            <div style={{ marginTop: '50px', display: 'flex', justifyContent: 'center' }}>
-               <button type="submit" disabled={saving} className="btn-gold" style={{ padding: '20px 80px', fontSize: '18px', fontWeight: 'bold' }}>
-                  {saving ? 'GUARDANDO...' : (editingId ? 'ACTUALIZAR DATOS' : 'CONFIRMAR SERENATA')}
-               </button>
-            </div>
-          </form>
+              <div style={{ marginTop: '40px', textAlign: 'right' }}>
+                 <button type="submit" disabled={saving} className="btn-gold" style={{ padding: '15px 40px', fontWeight: 'bold' }}>
+                   {saving ? 'GUARDANDO...' : 'CONFIRMAR SERENATA'}
+                 </button>
+              </div>
+           </form>
         </div>
       )}
 
-      {/* LISTA */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '25px' }}>
-        {!loading && serenatas.map(s => (
-          <div key={s.id} style={{ backgroundColor: '#ffffff02', border: '1px solid #ffffff11', borderRadius: '25px', padding: '25px', transition: '0.3s' }}>
-             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
-                <span style={{ color: '#D4AF37', fontWeight: '900' }}>{s.hora}</span>
-                <span style={{ color: '#666', fontSize: '12px' }}>{s.fecha}</span>
-             </div>
-             <h3 style={{ fontSize: '20px', color: '#fff', margin: '0 0 5px 0' }}>{s.nombre_festejada}</h3>
-             <p style={{ margin: 0, fontSize: '12px', color: '#D4AF37', fontWeight: 'bold' }}>{s.motivo}</p>
-             <div style={{ margin: '20px 0', fontSize: '14px', color: '#888' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}><MapPin size={16} /> {s.direccion}</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><Music size={16} /> {s.canciones?.length || 0} canciones</div>
-             </div>
-             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #ffffff05', paddingTop: '20px' }}>
-                <span style={{ fontSize: '20px', fontWeight: 'bold', color: '#fff' }}>${s.precio_total?.toLocaleString()}</span>
-                <button onClick={() => handleEdit(s)} style={{ backgroundColor: 'transparent', border: '1px solid #444', color: '#888', padding: '8px 15px', borderRadius: '10px', cursor: 'pointer' }}>DETALLES</button>
-             </div>
-          </div>
-        ))}
+      {/* LISTADO SIMPLE */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+         {serenatas.map(s => (
+           <div key={s.id} style={{ background: '#111', padding: '20px', borderRadius: '15px', border: '1px solid #222' }}>
+              <div style={{ fontSize: '11px', color: '#D4AF37', marginBottom: '8px' }}>{s.fecha} - {s.hora}</div>
+              <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#fff' }}>{s.nombre_festejada}</div>
+              <div style={{ fontSize: '12px', color: '#666' }}>{s.motivo}</div>
+           </div>
+         ))}
       </div>
     </div>
   );
