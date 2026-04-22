@@ -141,6 +141,11 @@ export default function SerenatasPage() {
 
   return (
     <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+      {/* BANNER ROJO DE EMERGENCIA - SI NO VES ESTO, VERCEL NO HA ACTUALIZADO */}
+      <div style={{ backgroundColor: '#ff0000', color: '#fff', padding: '20px', textAlign: 'center', fontWeight: 'bold', fontSize: '20px', marginBottom: '20px', borderRadius: '10px', border: '5px solid white' }}>
+        ⚠️ VERSIÓN V3.0 CARGADA CON ÉXITO - SI VES ESTO, EL CAMBIO YA LLEGÓ
+      </div>
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
         <h1 style={{ color: '#D4AF37', margin: 0, fontSize: '24px' }}>AGENDA DE PRESENTACIONES</h1>
         <button onClick={() => { setShowForm(!showForm); if(!showForm) resetForm(); }} className="btn-gold" style={{ padding: '12px 25px' }}>
