@@ -143,7 +143,7 @@ export default function SerenatasPage() {
     <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
       {/* BANNER ROJO DE EMERGENCIA - SI NO VES ESTO, VERCEL NO HA ACTUALIZADO */}
       <div style={{ backgroundColor: '#ff0000', color: '#fff', padding: '20px', textAlign: 'center', fontWeight: 'bold', fontSize: '20px', marginBottom: '20px', borderRadius: '10px', border: '5px solid white' }}>
-        ⚠️ VERSIÓN V3.1 CARGADA CON ÉXITO - SI VES ESTO, EL CAMBIO YA LLEGÓ
+        🔥 SOLUCIÓN DEFINITIVA V3.5 - SI VES ESTO, POR FIN SE ACTUALIZÓ 🔥
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
