@@ -8,18 +8,32 @@ import {
   MoreVertical,
   MapPin,
   Calendar as CalendarIcon,
-  Loader2
+  Loader2,
+  Music,
+  CheckCircle,
+  X,
+  FileText,
+  Phone,
+  Clock,
+  Trash2
 } from 'lucide-react';
 
-interface Cliente {
-  id: string;
-  nombre: string;
-}
+const LISTADO_CANCIONES = [
+  "Mil puñados de oro", "Jalisco no te rajes", "Un millón de primaveras",
+  "La venia bendita", "No me se rajar", "El rey", "Celos", "Mujeres divinas",
+  "Me bebí tu recuerdo", "Matalas", "Caballo prieto azabache", "El aventurero",
+  "El Adiós a la vida", "Volver Volver", "Borracho te recuerdo", "Cielito lindo",
+  "Las mañanitas", "Si te vas no hay lío", "Que chulada de mujer", "Acá entre nos",
+  "Que de raro tiene", "Por tu maldito amor", "A quien vas a amar más que a mi",
+  "La ley del monte", "El ayudante", "Si nos dejan", "Le canto a la mujer",
+  "Yo te extrañaré", "Nadie es eterno en el mundo", "Si no te hubieras ido",
+  "Madrecita querida", "Mi amigo el tordillo", "Es la mujer"
+];
 
 interface Serenata {
   id: string;
-  cliente_id: string;
-  clientes?: { nombre: string }; // Join relation depending on Supabase query
+  nombre_cliente?: string;
+  telefono?: string;
   nombre_festejada: string;
   motivo: string;
   fecha: string;
@@ -29,18 +43,20 @@ interface Serenata {
   tipo: string;
   precio_total: number;
   estado: string;
+  canciones?: string[];
 }
 
 export default function SerenatasPage() {
   const [serenatas, setSerenatas] = useState<Serenata[]>([]);
-  const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   // Form values
   const [formData, setFormData] = useState({
-    cliente_id: '',
+    nombre_cliente: '',
+    telefono: '',
     nombre_festejada: '',
     motivo: '',
     fecha: '',
@@ -48,19 +64,25 @@ export default function SerenatasPage() {
     direccion: '',
     comuna: '',
     tipo: 'express',
-    precio_total: 0
+    precio_total: 25000,
+    canciones: [] as string[]
   });
+
+  useEffect(() => {
+    if (!editingId) {
+      if (formData.tipo === 'express') {
+        setFormData(prev => ({ ...prev, precio_total: 25000 }));
+      } else {
+        setFormData(prev => ({ ...prev, precio_total: 40000 }));
+      }
+    }
+  }, [formData.tipo, editingId]);
 
   const fetchData = async () => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
-      const [resSerenatas, resClientes] = await Promise.all([
-        fetch(`${apiUrl}/serenatas`),
-        fetch(`${apiUrl}/clientes`)
-      ]);
-      
-      if (resSerenatas.ok) setSerenatas(await resSerenatas.json());
-      if (resClientes.ok) setClientes(await resClientes.json());
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api-alpha-five-25.vercel.app/api';
+      const res = await fetch(`${apiUrl}/serenatas`);
+      if (res.ok) setSerenatas(await res.json());
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -79,22 +101,30 @@ export default function SerenatasPage() {
     }));
   };
 
+  const toggleSong = (song: string) => {
+    setFormData(prev => ({
+      ...prev,
+      canciones: prev.canciones.includes(song)
+        ? prev.canciones.filter(c => c !== song)
+        : [...prev.canciones, song]
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
-      const response = await fetch(`${apiUrl}/serenatas`, {
-        method: 'POST',
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api-alpha-five-25.vercel.app/api';
+      const url = editingId ? `${apiUrl}/serenatas/${editingId}` : `${apiUrl}/serenatas`;
+      const response = await fetch(url, {
+        method: editingId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
       if (response.ok) {
         setShowForm(false);
-        setFormData({
-          cliente_id: '', nombre_festejada: '', motivo: '', fecha: '', 
-          hora: '', direccion: '', comuna: '', tipo: 'express', precio_total: 0
-        });
+        setEditingId(null);
+        resetForm();
         fetchData();
       }
     } catch (error) {
@@ -104,15 +134,46 @@ export default function SerenatasPage() {
     }
   };
 
+  const resetForm = () => {
+    setFormData({
+      nombre_cliente: '', telefono: '', nombre_festejada: '', motivo: '', fecha: '', 
+      hora: '', direccion: '', comuna: '', tipo: 'express', precio_total: 25000, canciones: []
+    });
+  };
+
+  const handleEdit = (s: Serenata) => {
+    setEditingId(s.id);
+    setFormData({
+      nombre_cliente: s.nombre_cliente || '',
+      telefono: s.telefono || '',
+      nombre_festejada: s.nombre_festejada,
+      motivo: s.motivo,
+      fecha: s.fecha,
+      hora: s.hora,
+      direccion: s.direccion,
+      comuna: s.comuna,
+      tipo: s.tipo,
+      precio_total: s.precio_total,
+      canciones: s.canciones || []
+    });
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const downloadPDF = (id: string) => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api-alpha-five-25.vercel.app/api';
+    window.open(`${apiUrl}/reportes/serenata/${id}`, '_blank');
+  };
+
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-8 animate-in fade-in duration-500 pb-20">
       <div className="flex justify-between items-end">
         <div>
-          <h1 className="hero-title text-4xl font-bold gold-gradient-text tracking-tighter">GESTIONAR SERENATAS</h1>
-          <p className="text-white/40 mt-2 font-medium">Control total de tus presentaciones y eventos.</p>
+          <h1 className="hero-title text-4xl font-bold gold-gradient-text tracking-tighter uppercase">Agenda de Presentaciones</h1>
+          <p className="text-white/40 mt-2 font-medium">Gestiona tus eventos en tiempo real.</p>
         </div>
         <button 
-          onClick={() => setShowForm(!showForm)}
+          onClick={() => { setShowForm(!showForm); if(!showForm) resetForm(); }}
           className="btn-gold flex items-center gap-2"
         >
           <Plus size={20} /> Nueva Serenata
@@ -121,117 +182,178 @@ export default function SerenatasPage() {
 
       {showForm && (
         <div className="glass-card mb-8 animate-in slide-in-from-top-4">
-          <h2 className="text-xl font-semibold mb-4 text-[var(--accent-gold)]">Agendar Serenata</h2>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-1">Cliente que contrata</label>
-              <select required name="cliente_id" onChange={handleInputChange} value={formData.cliente_id} className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[var(--accent-gold)] appearance-none">
-                <option value="">Seleccione un cliente...</option>
-                {clientes.map(c => (
-                  <option key={c.id} value={c.id}>{c.nombre}</option>
+          <h2 className="text-xl font-semibold mb-6 text-[var(--accent-gold)]">
+            {editingId ? 'Modificar Serenata' : 'Agendar Serenata'}
+          </h2>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div className="group">
+                  <label className="label-text">Cliente que contrata</label>
+                  <input required type="text" name="nombre_cliente" onChange={handleInputChange} value={formData.nombre_cliente} className="input-field" placeholder="Nombre completo" />
+                </div>
+                <div className="group">
+                  <label className="label-text">Teléfono contacto</label>
+                  <input required type="text" name="telefono" onChange={handleInputChange} value={formData.telefono} className="input-field" placeholder="+569..." />
+                </div>
+                <div className="group">
+                  <label className="label-text">Festejada(o)</label>
+                  <input required type="text" name="nombre_festejada" onChange={handleInputChange} value={formData.nombre_festejada} className="input-field" placeholder="¿A quién le cantamos?" />
+                </div>
+                <div className="group">
+                  <label className="label-text">Motivo</label>
+                  <input required type="text" name="motivo" onChange={handleInputChange} value={formData.motivo} className="input-field" placeholder="Ej. Cumpleaños" />
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="label-text">Fecha</label>
+                    <input required type="date" name="fecha" onChange={handleInputChange} value={formData.fecha} className="input-field" />
+                  </div>
+                  <div>
+                    <label className="label-text">Hora</label>
+                    <input required type="time" name="hora" onChange={handleInputChange} value={formData.hora} className="input-field" />
+                  </div>
+                </div>
+                <div className="group">
+                  <label className="label-text">Dirección</label>
+                  <input required type="text" name="direccion" onChange={handleInputChange} value={formData.direccion} className="input-field" placeholder="Calle Ejemplo 123" />
+                </div>
+                <div className="group">
+                  <label className="label-text">Comuna</label>
+                  <input required type="text" name="comuna" onChange={handleInputChange} value={formData.comuna} className="input-field" placeholder="Ej. Los Angeles" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="label-text">Tipo</label>
+                    <select name="tipo" onChange={handleInputChange} value={formData.tipo} className="input-field appearance-none">
+                      <option value="express">Express (2s)</option>
+                      <option value="full">Full (4s)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label-text">Precio Acordado</label>
+                    <input required type="number" name="precio_total" onChange={handleInputChange} value={formData.precio_total} className="input-field font-bold text-[var(--accent-gold)]" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-white/5 pt-6">
+              <label className="label-text mb-4">Seleccionar Repertorio ({formData.canciones.length})</label>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 h-48 overflow-y-auto pr-2 custom-scrollbar">
+                {LISTADO_CANCIONES.map(song => (
+                  <button
+                    key={song}
+                    type="button"
+                    onClick={() => toggleSong(song)}
+                    className={`px-3 py-2 text-xs rounded-lg border text-left flex items-center justify-between transition-all ${
+                      formData.canciones.includes(song) 
+                        ? 'bg-[var(--accent-gold)] border-[var(--accent-gold)] text-black font-bold' 
+                        : 'bg-white/5 border-white/10 text-white/60 hover:border-white/20'
+                    }`}
+                  >
+                    <span className="truncate">{song}</span>
+                    {formData.canciones.includes(song) && <CheckCircle size={12} />}
+                  </button>
                 ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-1">Nombre Festejada(o)</label>
-              <input required type="text" name="nombre_festejada" onChange={handleInputChange} value={formData.nombre_festejada} className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[var(--accent-gold)]" placeholder="Ej. Doña María" />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-1">Fecha</label>
-              <input required type="date" name="fecha" onChange={handleInputChange} value={formData.fecha} className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[var(--accent-gold)]" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-1">Hora</label>
-              <input required type="time" name="hora" onChange={handleInputChange} value={formData.hora} className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[var(--accent-gold)]" />
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-1">Dirección</label>
-              <input required type="text" name="direccion" onChange={handleInputChange} value={formData.direccion} className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[var(--accent-gold)]" placeholder="Calle Ejemplo #123" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-1">Comuna / Zona</label>
-              <input required type="text" name="comuna" onChange={handleInputChange} value={formData.comuna} className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[var(--accent-gold)]" placeholder="Ej. Centro" />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-1">Tipo de Serenata</label>
-              <select required name="tipo" onChange={handleInputChange} value={formData.tipo} className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[var(--accent-gold)] appearance-none">
-                <option value="express">Express (7 Canciones)</option>
-                <option value="full">Full (15 Canciones)</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-1">Precio Acordado ($)</label>
-              <input required type="number" name="precio_total" onChange={handleInputChange} value={formData.precio_total} className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[var(--accent-gold)]" placeholder="Ej. 70000" />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-white/70 mb-1">Motivo</label>
-              <input required type="text" name="motivo" onChange={handleInputChange} value={formData.motivo} className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[var(--accent-gold)]" placeholder="Ej. Cumpleaños, Aniversario, Reconciliación..." />
-            </div>
-            
-            <div className="md:col-span-2 flex justify-end gap-3 mt-4">
-              <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 rounded-lg border border-white/10 text-white/70 hover:bg-white/5">Cancelar</button>
-              <button type="submit" disabled={saving} className="btn-gold flex items-center gap-2">
-                {saving ? <Loader2 size={16} className="animate-spin" /> : 'Confirmar Agenda'}
+            <div className="flex justify-end gap-3 pt-6">
+              <button type="button" onClick={() => { setShowForm(false); setEditingId(null); }} className="px-6 py-2 rounded-lg border border-white/10 text-white/70 hover:bg-white/5 font-bold text-sm">CANCELAR</button>
+              <button type="submit" disabled={saving} className="btn-gold flex items-center gap-2 px-8">
+                {saving ? <Loader2 size={16} className="animate-spin" /> : editingId ? 'GUARDAR CAMBIOS' : 'CONFIRMAR AGENDA'}
               </button>
             </div>
           </form>
         </div>
       )}
 
-      {/* Tabla de Serenatas */}
-      <div className="glass-card p-0 overflow-hidden">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {loading ? (
-          <div className="py-12 flex justify-center"><Loader2 className="animate-spin text-[var(--accent-gold)]" size={32} /></div>
+          <div className="col-span-full py-12 flex justify-center"><Loader2 className="animate-spin text-[var(--accent-gold)]" size={32} /></div>
         ) : serenatas.length === 0 ? (
-          <div className="py-12 text-center text-white/40">No hay serenatas registradas.</div>
+          <div className="col-span-full py-12 text-center text-white/40">No hay eventos registrados.</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-[#0f0f0f] text-white/40 text-xs uppercase tracking-wider">
-                <tr>
-                  <th className="px-6 py-4 font-semibold">Evento / Festejada</th>
-                  <th className="px-6 py-4 font-semibold">Ubicación</th>
-                  <th className="px-6 py-4 font-semibold">Fecha / Hora</th>
-                  <th className="px-6 py-4 font-semibold">Estado</th>
-                  <th className="px-6 py-4 font-semibold text-right">Monto</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {serenatas.map((item) => (
-                  <tr key={item.id} className="hover:bg-white/[0.02] transition-colors group">
-                    <td className="px-6 py-4">
-                      <div className="font-medium text-white">{item.motivo} a {item.nombre_festejada}</div>
-                      <div className="text-xs text-white/40">Tipo: {item.tipo}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 text-sm text-white/70">
-                        <MapPin size={14} className="text-[var(--accent-gold)]" /> {item.comuna}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-white/70">
-                      <div className="flex items-center gap-2 bg-white/5 w-fit px-3 py-1 rounded-full border border-white/5">
-                        <CalendarIcon size={14} className="text-[var(--accent-gold)]"/> {item.fecha}
-                      </div>
-                      <div className="text-[11px] uppercase font-bold text-white/50 ml-2 mt-1">{item.hora} HRS</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-3 py-1 bg-white/5 border border-white/10 text-xs rounded-full uppercase font-bold tracking-tighter ${item.estado === 'completada' ? 'text-emerald-500' : 'text-yellow-500'}`}>
-                        {item.estado || 'Confirmada'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right font-bold text-white text-sm">
-                      ${item.precio_total?.toLocaleString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          serenatas.map((item) => (
+            <div key={item.id} className="glass-card hover:border-white/20 transition-all group overflow-hidden">
+              <div className="flex justify-between items-start mb-4">
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-white group-hover:text-[var(--accent-gold)] transition-colors">{item.nombre_festejada}</h3>
+                  <div className="text-[10px] uppercase tracking-widest text-white/40 font-bold flex items-center gap-2">
+                    <Music size={10} className="text-[var(--accent-gold)]" /> {item.motivo}
+                  </div>
+                  {item.nombre_cliente && (
+                    <div className="text-xs text-white/60 mt-1 italic">Contrata: {item.nombre_cliente}</div>
+                  )}
+                </div>
+                <div className="bg-[var(--accent-gold)] text-black px-2 py-1 rounded text-xs font-black">
+                  {item.hora}
+                </div>
+              </div>
+
+              <div className="space-y-2 mb-6">
+                <div className="flex items-center gap-2 text-sm text-white/70">
+                  <MapPin size={14} className="text-[var(--accent-gold)] flex-shrink-0" /> 
+                  <span className="truncate">{item.direccion}, {item.comuna}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-white/70">
+                  <CalendarIcon size={14} className="text-[var(--accent-gold)] flex-shrink-0" />
+                  {item.fecha}
+                </div>
+                {item.telefono && (
+                  <div className="flex items-center gap-2 text-sm text-white/70">
+                    <Phone size={14} className="text-[var(--accent-gold)] flex-shrink-0" />
+                    {item.telefono}
+                  </div>
+                )}
+              </div>
+
+              {item.canciones && item.canciones.length > 0 && (
+                <div className="bg-black/50 rounded-lg p-3 mb-6 border border-white/5">
+                   <div className="text-[9px] uppercase font-bold text-white/30 mb-2 flex items-center gap-2">
+                      <ListIcon size={10} /> Repertorio Seleccionado
+                   </div>
+                   <div className="flex flex-wrap gap-1">
+                      {item.canciones.map((c, i) => (
+                        <span key={i} className="text-[10px] px-2 py-0.5 bg-white/5 rounded text-white/60 border border-white/5">
+                          {c}
+                        </span>
+                      ))}
+                   </div>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between border-t border-white/10 pt-4">
+                 <div className="text-lg font-black text-white">${item.precio_total?.toLocaleString()}</div>
+                 <div className="flex gap-2">
+                    <button onClick={() => downloadPDF(item.id)} className="p-2 hover:bg-white/10 rounded-lg text-red-500 transition-colors" title="Bajar Comprobante">
+                       <FileText size={18} />
+                    </button>
+                    <button onClick={() => handleEdit(item)} className="p-2 hover:bg-white/10 rounded-lg text-blue-500 transition-colors">
+                       <Edit3 size={18} />
+                    </button>
+                 </div>
+              </div>
+            </div>
+          ))
         )}
       </div>
     </div>
+  );
+}
+
+function ListIcon({ size }: { size: number }) {
+  return <span style={{ width: size, height: size }}>📜</span>;
+}
+
+function Edit3({ size, className }: { size: number, className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+    </svg>
   );
 }
