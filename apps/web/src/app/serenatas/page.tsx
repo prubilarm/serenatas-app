@@ -171,15 +171,20 @@ export default function SerenatasPage() {
 
   return (
     <div style={{ paddingBottom: '100px' }}>
+      {/* BANNER DE CONFIRMACIÓN DE VERSIÓN */}
+      <div style={{ backgroundColor: '#D4AF37', color: '#000', padding: '10px', textAlign: 'center', fontWeight: 'black', marginBottom: '30px', borderRadius: '8px', fontSize: '14px', letterSpacing: '2px' }}>
+        🚀 VERSIÓN 2.1 ACTIVADA - DISEÑO PREMIUM Y REPERTORIO POR LETRAS
+      </div>
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-        <h1 className="hero-title" style={{ fontSize: '28px', color: '#D4AF37' }}>AGENDA DE SERENATAS</h1>
-        <button onClick={() => { setShowForm(!showForm); if(!showForm) resetForm(); }} className="btn-gold">
+        <h1 className="hero-title" style={{ fontSize: '28px', color: '#D4AF37', margin: 0 }}>AGENDA DE SERENATAS</h1>
+        <button onClick={() => { setShowForm(!showForm); if(!showForm) resetForm(); }} className="btn-gold" style={{ cursor: 'pointer' }}>
           {showForm ? 'CANCELAR' : 'NUEVA SERENATA'}
         </button>
       </div>
 
       {showForm && (
-        <div className="glass-card" style={{ marginBottom: '40px', border: '1px solid #D4AF3733' }}>
+        <div className="glass-card" style={{ marginBottom: '40px', border: '1px solid #D4AF3744', backgroundColor: '#0A0A0A', padding: '25px', borderRadius: '20px' }}>
           <form onSubmit={handleSubmit}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px', marginBottom: '30px' }}>
               
