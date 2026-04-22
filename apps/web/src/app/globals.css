@@ -2,31 +2,93 @@
 
 :root {
   --foreground-rgb: 255, 255, 255;
-  --background-start-rgb: 10, 10, 10;
+  --background-start-rgb: 5, 5, 5;
   --background-end-rgb: 0, 0, 0;
 
+  /* Palette: Gold & Royal Black */
   --accent-gold: #D4AF37;
-  --accent-gold-dark: #AA8B2E;
-  --bg-card: #1A1A1A;
+  --accent-gold-bright: #F4D03F;
+  --accent-gold-dim: #AA8B2E;
+  --accent-gold-soft: rgba(212, 175, 55, 0.15);
+  
+  --bg-dark: #050505;
+  --bg-card: rgba(26, 26, 26, 0.6);
+  --border-glass: rgba(255, 255, 255, 0.08);
+  
+  --font-marcellus: 'Marcellus', serif;
+  --font-outfit: 'Outfit', sans-serif;
 }
 
 body {
   color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
-  min-height: 100vh;
+  background-color: var(--bg-dark);
+  font-family: var(--font-outfit);
+  overflow-x: hidden;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(212, 175, 55, 0.2);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-gold);
 }
 
 @layer components {
+  .hero-title {
+    font-family: var(--font-marcellus);
+    @apply tracking-widest uppercase;
+  }
+
   .btn-gold {
-    @apply bg-[var(--accent-gold)] hover:bg-[var(--accent-gold-dark)] text-black font-semibold py-2 px-4 rounded-lg transition-all duration-200 transform hover:scale-105;
+    @apply bg-gradient-to-br from-[var(--accent-gold)] to-[var(--accent-gold-dim)] hover:from-[var(--accent-gold-bright)] hover:to-[var(--accent-gold)] text-black font-bold py-2 px-6 rounded-lg shadow-[0_0_20px_rgba(212,175,55,0.2)] hover:shadow-[0_0_30px_rgba(212,175,55,0.4)] transition-all duration-300 transform active:scale-95;
   }
   
   .glass-card {
-    @apply bg-[var(--bg-card)] border border-white/10 rounded-xl p-6 shadow-2xl;
+    @apply bg-[var(--bg-card)] backdrop-blur-xl border border-[var(--border-glass)] rounded-2xl p-6 shadow-[0_8px_32px_0_rgba(0,0,0,0.8)] hover:border-white/20 transition-all duration-500;
   }
+
+  .nav-item {
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 relative overflow-hidden;
+  }
+
+  .nav-item::before {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-r from-[var(--accent-gold)]/10 to-transparent opacity-0 transition-opacity duration-300;
+  }
+
+  .nav-item:hover::before {
+    @apply opacity-100;
+  }
+
+  .gold-gradient-text {
+    @apply bg-gradient-to-r from-[var(--accent-gold)] via-[var(--accent-gold-bright)] to-[var(--accent-gold-dim)] bg-clip-text text-transparent;
+  }
+
+  .shimmer {
+    background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0) 100%);
+    background-size: 200% 100%;
+    animation: shimmer-animation 2s infinite;
+  }
+}
+
+@keyframes shimmer-animation {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+/* Base background glow effects */
+.bg-glow-gold {
+  background: radial-gradient(circle at 50% 50%, var(--accent-gold-soft) 0%, transparent 70%);
 }

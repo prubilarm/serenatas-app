@@ -1,15 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
+import crypto from 'crypto';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
 const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  const errorMsg = '⚠️ Error: Faltan SUPABASE_URL o SUPABASE_ANON_KEY en las variables de entorno de Vercel.';
+if (!supabaseUrl || !supabaseKey) {
+  const errorMsg = '⚠️ Error: Faltan SUPABASE_URL o llaves API en el entorno.';
   console.error(errorMsg);
-  // No lanzamos error aquí para no romper el inicio, pero lo registraremos
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseKey);

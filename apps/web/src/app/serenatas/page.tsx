@@ -108,8 +108,8 @@ export default function SerenatasPage() {
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex justify-between items-end">
         <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-[var(--accent-gold)] to-yellow-200 bg-clip-text text-transparent">Gestionar Serenatas</h1>
-          <p className="text-white/50 mt-2">Control total de tus presentaciones y eventos.</p>
+          <h1 className="hero-title text-4xl font-bold gold-gradient-text tracking-tighter">GESTIONAR SERENATAS</h1>
+          <p className="text-white/40 mt-2 font-medium">Control total de tus presentaciones y eventos.</p>
         </div>
         <button 
           onClick={() => setShowForm(!showForm)}

@@ -69,10 +69,10 @@ export default function ClientesPage() {
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-[var(--accent-gold)] to-yellow-200 bg-clip-text text-transparent">
-            Directorio de Clientes
+          <h1 className="hero-title text-4xl font-bold gold-gradient-text tracking-tighter">
+            DIRECTORIO DE CLIENTES
           </h1>
-          <p className="text-white/50 mt-2">Gestiona los contactos y contratistas del mariachi.</p>
+          <p className="text-white/40 mt-2 font-medium">Gestiona los contactos y contratistas del mariachi.</p>
         </div>
         
         <button 

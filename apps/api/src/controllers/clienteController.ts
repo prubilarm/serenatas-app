@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { supabase } from '../utils/supabase';
-import { Cliente } from '@shared/index';
+// Removed shared import
+import crypto from 'crypto';
 
 export const getClientes = async (req: Request, res: Response) => {
   try {
@@ -18,7 +19,10 @@ export const getClientes = async (req: Request, res: Response) => {
 
 export const createCliente = async (req: Request, res: Response) => {
   try {
-    const nuevoCliente: Partial<Cliente> = req.body;
+    const nuevoCliente: any = {
+      id: crypto.randomUUID(),
+      ...req.body
+    };
     
     const { data, error } = await supabase
       .from('clientes')

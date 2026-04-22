@@ -8,28 +8,31 @@ import {
   Music,
   ArrowUpRight,
   Clock,
-  Loader2
+  Loader2,
+  ChevronRight
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
-const StatCard = ({ title, value, icon: Icon, description, trend }: any) => (
-  <div className="glass-card flex flex-col gap-2">
-    <div className="flex justify-between items-start">
-      <div className="p-2 bg-white/5 rounded-lg">
-        <Icon size={24} className="text-[var(--accent-gold)]" />
+const StatCard = ({ title, value, icon: Icon, description, trend, color }: any) => (
+  <div className="glass-card group hover:translate-y-[-4px]">
+    <div className="flex justify-between items-start mb-4">
+      <div className={`p-3 rounded-2xl ${color || 'bg-[var(--accent-gold)]/10 text-[var(--accent-gold)]'}`}>
+        <Icon size={24} />
       </div>
       {trend && (
-        <span className="text-xs text-green-400 flex items-center gap-1 font-medium">
-          {trend} <ArrowUpRight size={12} />
+        <span className="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded-full flex items-center gap-1 font-bold uppercase tracking-tighter">
+          {trend} <ArrowUpRight size={10} />
         </span>
       )}
     </div>
     <div>
-      <h3 className="text-white/50 text-sm font-medium">{title}</h3>
-      <p className="text-2xl font-bold text-white">{value}</p>
+      <p className="text-white/40 text-[10px] font-bold uppercase tracking-[0.2em] mb-1">{title}</p>
+      <p className="text-3xl font-bold text-white tracking-tight">{value}</p>
     </div>
-    <p className="text-[10px] text-white/30 uppercase tracking-widest">{description}</p>
+    <div className="mt-4 pt-4 border-t border-white/5">
+      <p className="text-[10px] text-white/20 font-medium italic">{description}</p>
+    </div>
   </div>
 );
 
@@ -37,32 +40,34 @@ export default function DashboardPage() {
   const [serenatas, setSerenatas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState([
-    { title: 'Serenatas Hoy', value: '0', icon: Music, description: 'Eventos programados' },
-    { title: 'Ingresos Mes', value: '$0', icon: DollarSign, description: 'Total recaudado' },
-    { title: 'Pendientes', value: '0', icon: Clock, description: 'Por cobrar' },
-    { title: 'Clientes', value: '0', icon: Users, description: 'Cartera histórica' },
+    { title: 'Serenatas Hoy', value: '0', icon: Music, description: 'Presentaciones programadas para hoy', color: 'bg-blue-500/10 text-blue-400' },
+    { title: 'Ingresos Mes', value: '$0', icon: DollarSign, description: 'Recaudación total del mes en curso', color: 'bg-emerald-500/10 text-emerald-400', trend: '12%' },
+    { title: 'Pendientes', value: '0', icon: Clock, description: 'Eventos por confirmar o cobrar', color: 'bg-amber-500/10 text-amber-400' },
+    { title: 'Clientes', value: '0', icon: Users, description: 'Base total de clientes registrados', color: 'bg-purple-500/10 text-purple-400' },
   ]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // En producción usaremos una variable de entorno, por ahora fallback a localhost
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
-        const response = await fetch(`${apiUrl}/serenatas`);
-        const data = await response.json();
+        const [resS, resC] = await Promise.all([
+          fetch(`${apiUrl}/serenatas`),
+          fetch(`${apiUrl}/clientes`)
+        ]);
         
-        if (Array.isArray(data)) {
-          setSerenatas(data.slice(0, 5)); // Mostrar las últimas 5
-          
-          // Cálculo básico de stats para la demo
+        const dataS = await resS.json();
+        const dataC = await resC.json();
+        
+        if (Array.isArray(dataS)) {
+          setSerenatas(dataS.slice(0, 5));
           const hoy = new Date().toISOString().split('T')[0];
-          const hoyCount = data.filter((s: any) => s.fecha === hoy).length;
+          const hoyCount = dataS.filter((s: any) => s.fecha === hoy).length;
           
           setStats([
-            { title: 'Serenatas Hoy', value: hoyCount.toString(), icon: Music, description: 'Eventos programados' },
-            { title: 'Ingresos Mes', value: `$${data.reduce((acc: number, s: any) => acc + (s.precio_total || 0), 0).toLocaleString()}`, icon: DollarSign, description: 'Total recaudado' },
-            { title: 'Pendientes', value: data.filter((s: any) => s.estado === 'cotizada').length.toString(), icon: Clock, description: 'Por cobrar' },
-            { title: 'Clientes', value: '...', icon: Users, description: 'Cartera histórica' },
+            { title: 'Serenatas Hoy', value: hoyCount.toString(), icon: Music, description: 'Presentaciones programadas para hoy', color: 'bg-blue-500/10 text-blue-400' },
+            { title: 'Ingresos Mes', value: `$${dataS.reduce((acc: number, s: any) => acc + (s.precio_total || 0), 0).toLocaleString()}`, icon: DollarSign, description: 'Recaudación total del mes en curso', color: 'bg-emerald-500/10 text-emerald-400', trend: '12%' },
+            { title: 'Pendientes', value: dataS.filter((s: any) => s.estado === 'cotizada').length.toString(), icon: Clock, description: 'Eventos por confirmar o cobrar', color: 'bg-amber-500/10 text-amber-400' },
+            { title: 'Clientes', value: dataC.length.toString(), icon: Users, description: 'Base total de clientes registrados', color: 'bg-purple-500/10 text-purple-400' },
           ]);
         }
       } catch (error) {
@@ -76,10 +81,24 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div className="max-w-6xl mx-auto space-y-10">
-      <header>
-        <h1 className="text-3xl font-bold text-white">Bienvenido, Mariachi</h1>
-        <p className="text-white/50">Aquí tienes el resumen de hoy, {format(new Date(), "dd 'de' MMMM", { locale: es })}.</p>
+    <div className="max-w-7xl mx-auto space-y-12 pb-20">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <h1 className="hero-title text-4xl font-bold gold-gradient-text tracking-tighter">
+            PANEL DE CONTROL
+          </h1>
+          <p className="text-white/40 mt-2 font-medium tracking-wide">
+            Resumen operativo para hoy, <span className="text-white/70">{format(new Date(), "EEEE dd 'de' MMMM", { locale: es })}</span>
+          </p>
+        </div>
+        <div className="flex gap-4">
+          <button className="px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/60 text-sm font-bold hover:bg-white/10 transition-all uppercase tracking-widest">
+            Soporte
+          </button>
+          <button className="btn-gold uppercase text-xs tracking-[0.2em]">
+            Nueva Orden
+          </button>
+        </div>
       </header>
 
       {/* Grid de Stats */}
@@ -92,57 +111,87 @@ export default function DashboardPage() {
       {/* Secciones Inferiores */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Próximas Serenatas */}
-        <div className="lg:col-span-2 glass-card space-y-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold text-white">Próximas Serenatas</h2>
-            <button className="text-[var(--accent-gold)] text-sm hover:underline">Ver todas</button>
+        <div className="lg:col-span-2 glass-card !p-0 overflow-hidden">
+          <div className="p-8 pb-4 flex justify-between items-center border-b border-white/5">
+            <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-3">
+              <Calendar className="text-[var(--accent-gold)]" size={20} />
+              Próximas Serenatas
+            </h2>
+            <button className="text-[var(--accent-gold)] font-bold text-[10px] uppercase tracking-widest hover:brightness-125 transition-all flex items-center gap-1">
+              Ver todas <ChevronRight size={14} />
+            </button>
           </div>
           
-          {loading ? (
-            <div className="flex justify-center py-10">
-              <Loader2 className="animate-spin text-[var(--accent-gold)]" size={32} />
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {serenatas.length > 0 ? (
-                serenatas.map((serenata) => (
-                  <div key={serenata.id} className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/5 hover:border-[var(--accent-gold)]/30 transition-all cursor-pointer">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-[var(--accent-gold)]/10 rounded-full flex items-center justify-center text-[var(--accent-gold)] font-bold">
-                        {serenata.hora.slice(0, 5)}
+          <div className="p-4">
+            {loading ? (
+              <div className="flex justify-center py-20">
+                <Loader2 className="animate-spin text-[var(--accent-gold)]" size={40} />
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {serenatas.length > 0 ? (
+                  serenatas.map((serenata) => (
+                    <div key={serenata.id} className="flex items-center justify-between p-5 bg-white/[0.02] hover:bg-white/[0.05] rounded-2xl border border-white/5 hover:border-[var(--accent-gold)]/20 transition-all cursor-pointer group">
+                      <div className="flex items-center gap-5">
+                        <div className="w-14 h-14 bg-gradient-to-br from-white/10 to-transparent rounded-2xl flex flex-col items-center justify-center border border-white/10 group-hover:border-[var(--accent-gold)]/50 transition-all">
+                          <span className="text-xs font-bold text-[var(--accent-gold)]">{serenata.hora.slice(0, 5)}</span>
+                          <span className="text-[9px] text-white/30 uppercase font-black">HRS</span>
+                        </div>
+                        <div>
+                          <h4 className="text-white font-bold group-hover:text-[var(--accent-gold)] transition-colors">{serenata.nombre_festejada}</h4>
+                          <p className="text-[11px] text-white/40 font-medium flex items-center gap-1 mt-1 uppercase tracking-wider">
+                            <Clock size={10} /> {serenata.motivo} • {serenata.comuna}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="text-white font-medium">{serenata.nombre_festejada} - {serenata.motivo}</h4>
-                        <p className="text-xs text-white/40">{serenata.direccion}, {serenata.comuna}</p>
+                      <div className="text-right">
+                        <span className={`px-3 py-1 rounded-full uppercase font-black tracking-tighter text-[9px] border ${
+                          serenata.estado === 'confirmada' 
+                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                          : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                        }`}>
+                          {serenata.estado}
+                        </span>
+                        <p className="text-lg font-black text-white mt-2">${(serenata.precio_total || 0).toLocaleString()}</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <span className={`px-3 py-1 rounded-full uppercase font-bold tracking-wider text-[10px] ${
-                        serenata.estado === 'confirmada' ? 'bg-green-500/10 text-green-400' : 'bg-yellow-500/10 text-yellow-400'
-                      }`}>
-                        {serenata.estado}
-                      </span>
-                      <p className="text-sm font-bold text-white mt-1">${(serenata.precio_total || 0).toLocaleString()}</p>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-10 text-white/30">No hay serenatas programadas.</div>
-              )}
-            </div>
-          )}
+                  ))
+                ) : (
+                  <div className="text-center py-20 text-white/20 font-medium italic">No hay serenatas programadas para el periodo actual.</div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Notificaciones / Notas Rápidas */}
-        <div className="glass-card bg-[var(--accent-gold)]/5 border-[var(--accent-gold)]/20">
-          <h2 className="text-lg font-semibold text-[var(--accent-gold)] mb-4 flex items-center gap-2">
+        <div className="glass-card bg-gradient-to-br from-[var(--accent-gold)]/10 to-transparent border-[var(--accent-gold)]/30 flex flex-col">
+          <h2 className="text-lg font-bold text-[var(--accent-gold)] mb-6 flex items-center gap-2 uppercase tracking-widest">
             <Clock size={18} /> Recordatorios
           </h2>
-          <div className="space-y-4">
-            <div className="p-3 bg-white/5 border-l-2 border-[var(--accent-gold)] rounded-r-lg">
-              <p className="text-xs text-white/50 uppercase font-bold">Base de Datos</p>
-              <p className="text-sm text-white/70">Asegúrate de ejecutar el script SQL en Supabase para ver datos reales.</p>
+          <div className="space-y-4 flex-1">
+            <div className="p-5 bg-black/40 rounded-2xl border border-white/5 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[9px] font-black text-[var(--accent-gold)] uppercase tracking-[0.2em]">Prioridad Alta</span>
+                <span className="w-2 h-2 rounded-full bg-[var(--accent-gold)] animate-pulse"></span>
+              </div>
+              <p className="text-sm text-white/80 font-medium leading-relaxed">
+                Revisar pagos pendientes de la semana anterior antes del viernes.
+              </p>
             </div>
+            
+            <div className="p-5 bg-white/5 rounded-2xl border border-white/5">
+              <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em]">Agenda</p>
+              <p className="text-sm text-white/60 font-medium mt-1">
+                Ensayo general programado para el martes a las 18:00.
+              </p>
+            </div>
+          </div>
+          
+          <div className="mt-8">
+            <button className="w-full py-4 rounded-2xl bg-white/5 border border-white/10 text-white/40 text-[10px] font-black uppercase tracking-[0.3em] hover:text-white hover:bg-white/10 transition-all">
+              Nueva Nota +
+            </button>
           </div>
         </div>
       </div>

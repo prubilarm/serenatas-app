@@ -5,6 +5,7 @@ import { setupSwagger } from './utils/swagger';
 import clienteRoutes from './routes/clienteRoutes';
 import serenataRoutes from './routes/serenataRoutes';
 import pagoRoutes from './routes/pagoRoutes';
+import reporteRoutes from './routes/reporteRoutes';
 
 dotenv.config();
 
@@ -24,6 +25,7 @@ app.use((req, res, next) => {
 app.use('/api/clientes', clienteRoutes);
 app.use('/api/serenatas', serenataRoutes);
 app.use('/api/pagos', pagoRoutes);
+app.use('/api/reportes', reporteRoutes);
 
 // Documentación de la API
 try {
