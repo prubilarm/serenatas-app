@@ -110,35 +110,35 @@ export default function PagosPage() {
       </div>
 
       {showForm && (
-        <div className="glass-card mb-8 animate-in slide-in-from-top-4 border border-[var(--accent-gold)]/20">
-          <h2 className="text-xl font-semibold mb-4 text-[var(--accent-gold)] flex items-center gap-2">
-            <CreditCard size={20} /> Nuevo Abono
+        <div className="glass-card mb-8 animate-in slide-in-from-top-4 border border-[var(--accent-gold)]/20 shadow-[0_0_40px_rgba(212,175,55,0.05)]">
+          <h2 className="text-xl font-bold mb-6 text-[var(--accent-gold)] flex items-center gap-2 uppercase tracking-widest">
+            <CreditCard size={20} /> Registrar Nuevo Pago
           </h2>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="md:col-span-1">
-              <label className="block text-sm font-medium text-white/70 mb-1">Buscar Serenata</label>
-              <select required name="serenata_id" onChange={handleInputChange} value={formData.serenata_id} className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[var(--accent-gold)] appearance-none">
-                <option value="">Seleccione el evento...</option>
+              <label className="label-text">Seleccionar Serenata</label>
+              <select required name="serenata_id" onChange={handleInputChange} value={formData.serenata_id} className="input-field bg-black cursor-pointer">
+                <option value="">-- Elige el evento --</option>
                 {serenatas.map(s => (
                   <option key={s.id} value={s.id}>{s.motivo} ({s.nombre_festejada})</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-1">Monto ($)</label>
-              <input required type="number" name="monto" onChange={handleInputChange} value={formData.monto} className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[var(--accent-gold)]" placeholder="Ej. 15000" />
+              <label className="label-text">Monto del Abono ($)</label>
+              <input required type="number" name="monto" onChange={handleInputChange} value={formData.monto} className="input-field" placeholder="Ej. 15000" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-1">Método de Pago</label>
-              <select required name="metodo" onChange={handleInputChange} value={formData.metodo} className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[var(--accent-gold)] appearance-none">
+              <label className="label-text">Método de Pago</label>
+              <select required name="metodo" onChange={handleInputChange} value={formData.metodo} className="input-field bg-black cursor-pointer">
                 <option value="efectivo">Efectivo 💵</option>
                 <option value="transferencia">Transferencia 🏦</option>
               </select>
             </div>
-            <div className="md:col-span-3 flex items-end justify-end gap-3 mt-4">
-              <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 rounded-lg border border-white/10 text-white/70 hover:bg-white/5 transition-colors">Cancelar</button>
-              <button type="submit" disabled={saving} className="btn-gold flex items-center justify-center gap-2">
-                {saving ? <Loader2 size={16} className="animate-spin"/> : 'Guardar'}
+            <div className="md:col-span-3 flex flex-col md:flex-row items-stretch justify-end gap-3 mt-4">
+              <button type="button" onClick={() => setShowForm(false)} className="px-8 py-3 rounded-xl border border-white/10 text-white/50 hover:text-white font-bold text-xs uppercase tracking-widest">Descartar</button>
+              <button type="submit" disabled={saving} className="btn-gold min-w-[200px]">
+                {saving ? <Loader2 size={18} className="animate-spin"/> : 'GUARDAR PAGO'}
               </button>
             </div>
           </form>
