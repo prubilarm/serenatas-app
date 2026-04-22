@@ -42,22 +42,18 @@ const SerenataCard = ({ serenata, onUpdate, onEdit }: any) => {
       ? serenata.canciones.map((c: string, i: number) => `${i + 1}. ${c}`).join('\n')
       : 'A elección en el momento';
 
+    const pdfUrl = `${API_BASE}/api/reportes/serenata/${serenata.id}`;
     const msg = encodeURIComponent(
       `🎺 *EL MARIACHI AVENTURERO*\n` +
       `━━━━━━━━━━━━━━━━━━━\n` +
       `✅ *COMPROBANTE DE RESERVA*\n` +
       `━━━━━━━━━━━━━━━━━━━\n\n` +
-      `👤 *Cliente:* ${serenata.nombre_cliente || 'N/A'}\n` +
-      `🎉 *Serenata para:* ${serenata.nombre_festejada}\n` +
-      `🎊 *Motivo:* ${serenata.motivo || 'Celebración especial'}\n\n` +
+      `Hola ${serenata.nombre_cliente || ''}, adjuntamos el link a tu comprobante de reserva para la serenata de ${serenata.nombre_festejada}.\n\n` +
+      `📄 *Ver Comprobante:* ${pdfUrl}\n\n` +
       `📅 *Fecha:* ${fechaFormateada}\n` +
-      `⏰ *Hora:* ${serenata.hora || 'Por confirmar'}\n` +
-      `📍 *Dirección:* ${serenata.direccion}${serenata.comuna ? ', ' + serenata.comuna : ''}\n\n` +
-      `🎵 *Tipo:* ${tipoLabel}\n` +
-      `💰 *Valor:* $${(serenata.precio_total || 0).toLocaleString('es-CL')}\n\n` +
-      `🎼 *Repertorio:*\n${cancionesText}\n\n` +
-      `━━━━━━━━━━━━━━━━━━━\n` +
-      `¡Gracias por elegirnos! Haremos de este momento algo inolvidable. 🌹`
+      `⏰ *Hora:* ${serenata.hora || ''}\n` +
+      `📍 *Ubicación:* ${serenata.direccion}\n\n` +
+      `¡Gracias por preferirnos! 🌹`
     );
 
     Linking.openURL(`https://wa.me/${num}?text=${msg}`);
