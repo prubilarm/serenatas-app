@@ -91,12 +91,13 @@ body {
 /* ─── COMPONENTES MÓVIL ─────────────────────────────────── */
 .mobile-header {
   display: flex;
-  height: 60px;
-  background: #050505;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  height: 70px; /* Un poco más alto para aire */
+  background: rgba(5, 5, 5, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
+  padding: 0 24px;
   position: sticky;
   top: 0;
   z-index: 50;
@@ -114,11 +115,13 @@ body {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 70px;
-  background: rgba(8, 8, 8, 0.95);
-  backdrop-filter: blur(10px);
+  height: 85px; /* Aumentado para mejor visualización */
+  padding-bottom: 20px; /* Espacio para gestos de iPhone/Android */
+  background: rgba(8, 8, 8, 0.98);
+  backdrop-filter: blur(15px);
   border-top: 1px solid rgba(255,255,255,0.1);
   z-index: 50;
+  box-shadow: 0 -10px 30px rgba(0,0,0,0.5);
 }
 
 @media (min-width: 1200px) {
@@ -173,9 +176,16 @@ body {
 
 .glass-card {
   background: var(--bg-card);
-  border: 1px solid var(--border-glass);
-  border-radius: 1.25rem;
-  padding: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 24px;
+  padding: 24px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.glass-card:hover {
+  border-color: rgba(212, 175, 55, 0.2);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
 }
 
 .btn-gold {
@@ -213,15 +223,32 @@ body {
   font-size: 16px; /* Evita zoom automático en iPhone */
 }
 
-/* Grids */
-.stats-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+/* ─── ANIMACIONES DE NOTAS MUSICALES ─────────────────────── */
+@keyframes float-note {
+  0% { transform: translateY(0) rotate(0deg) scale(1); opacity: 0; }
+  20% { opacity: 0.8; }
+  100% { transform: translateY(-100px) rotate(20deg) scale(1.5); opacity: 0; }
 }
 
-@media (min-width: 1024px) {
-  .stats-grid {
-    grid-template-columns: repeat(4, 1fr);
-  }
+.musical-note {
+  position: absolute;
+  color: var(--accent-gold);
+  pointer-events: none;
+  animation: float-note 3s ease-in infinite;
+  z-index: 5;
+}
+
+.note-1 { left: 10%; animation-delay: 0s; font-size: 24px; }
+.note-2 { left: 40%; animation-delay: 1s; font-size: 18px; }
+.note-3 { left: 60%; animation-delay: 0.5s; font-size: 20px; }
+.note-4 { left: 85%; animation-delay: 1.5s; font-size: 22px; }
+
+@keyframes mariachi-dance {
+  0%, 100% { transform: rotate(-5deg) translateY(0); }
+  50% { transform: rotate(5deg) translateY(-10px); }
+}
+
+.loader-mariachi {
+  animation: mariachi-dance 1s ease-in-out infinite;
+  filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.5));
 }

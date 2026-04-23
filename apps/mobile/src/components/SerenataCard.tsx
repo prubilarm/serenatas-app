@@ -1,37 +1,56 @@
-import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Linking, Alert, Platform } from 'react-native';
+import React, { useState } from 'react';
+import { 
+  StyleSheet, View, Text, TouchableOpacity, Linking, 
+  Alert, Platform, Modal, TextInput, ScrollView
+} from 'react-native';
 import { 
   MessageCircle, MapPin, Trash2, Edit3, 
   Clock, DollarSign, Calendar, Check, RotateCcw,
-  FileText, Music
+  FileText, Music, X
 } from 'lucide-react-native';
 import { supabase } from '../lib/supabase';
 
 export default function SerenataCard({ serenata, onUpdate, onEdit }: any) {
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [montoPago, setMontoPago] = useState('');
+  const [medioPago, setMedioPago] = useState('Transferencia'); // 'Transferencia' o 'Efectivo'
+  
   const s = serenata;
-
+  
   const handleStatusToggle = async () => {
-    const isFinishing = s.estado !== 'completada';
-    const nextStatus = isFinishing ? 'completada' : 'pendiente';
-    
-    try {
-      await supabase.from('serenatas').update({ estado: nextStatus }).eq('id', s.id);
-      
-      if (isFinishing) {
-        Alert.alert(
-          'Servicio Finalizado',
-          '¿Deseas enviar el comprobante de pago escrito por WhatsApp?',
-          [
-            { text: 'No', onPress: () => onUpdate && onUpdate() },
-            { text: 'SÍ, ENVIAR', onPress: () => {
-              handleWhatsAppPago();
-              if (onUpdate) onUpdate();
-            }}
-          ]
-        );
-      } else {
+    if (s.estado !== 'completada') {
+      // Al finalizar, primero registramos el pago
+      setMontoPago(s.precio_total?.toString() || '');
+      setShowPaymentModal(true);
+    } else {
+      try {
+        await supabase.from('serenatas').update({ estado: 'pendiente' }).eq('id', s.id);
         if (onUpdate) onUpdate();
-      }
+      } catch (e: any) { Alert.alert('Error', e.message); }
+    }
+  };
+
+  const confirmFinalization = async () => {
+    try {
+      await supabase.from('serenatas').update({ 
+        estado: 'completada',
+        monto_pagado: Number(montoPago),
+        medio_pago: medioPago
+      }).eq('id', s.id);
+      
+      setShowPaymentModal(false);
+      
+      Alert.alert(
+        'Servicio Finalizado',
+        '¿Deseas enviar el comprobante de pago por WhatsApp?',
+        [
+          { text: 'No', onPress: () => onUpdate && onUpdate() },
+          { text: 'SÍ, ENVIAR', onPress: () => {
+            handleWhatsAppPago();
+            if (onUpdate) onUpdate();
+          }}
+        ]
+      );
     } catch (e: any) { Alert.alert('Error', e.message); }
   };
 
@@ -42,48 +61,50 @@ export default function SerenataCard({ serenata, onUpdate, onEdit }: any) {
     if (url) Linking.openURL(url);
   };
 
-  // NUEVO: Comprobante de Pago por TEXTO (Sin PDF)
   const handleWhatsAppPago = () => {
-    const cancionesTxt = s.canciones?.length > 0 ? s.canciones.join(', ') : 'No especificadas';
-    const msg = `🎺 EL MARIACHI AVENTURERO
+    // SIN CANCIONES en el comprobante de pago
+    const msg = `🎺 *EL MARIACHI AVENTURERO*
 ━━━━━━━━━━━━━━━━━━━
-✅ COMPROBANTE DE PAGO
+✅ *COMPROBANTE DE PAGO*
 
-Hola ${s.nombre_cliente}, confirmamos la recepción del pago por la serenata realizada hoy.
+Hola *${s.nombre_cliente}*, confirmamos la recepción del pago por la serenata realizada hoy.
 
-DETALLES DEL SERVICIO:
-• Festejada: ${s.nombre_festejada}
-• Motivo: ${s.motivo || 'Serenata'}
-• Fecha: ${s.fecha.split('-').reverse().join('-')}
-• Ubicación: ${s.direccion}, ${s.comuna}
-• Canciones: ${cancionesTxt}
+*DETALLES DEL SERVICIO:*
+• *Festejada:* ${s.nombre_festejada}
+• *Motivo:* ${s.motivo || 'Serenata'}
+• *Fecha:* ${s.fecha.split('-').reverse().join('-')}
+• *Ubicación:* ${s.direccion}, ${s.comuna}
 
-MONTO TOTAL: $${s.precio_total?.toLocaleString()}
-ESTADO: Pagado (Efectivo/Transferencia)
+*MONTO PAGADO:* $${Number(montoPago || s.precio_total).toLocaleString()}
+*MEDIO DE PAGO:* ${medioPago}
 
 Muchas gracias por preferir nuestros servicios. ¡Hicimos de este momento algo inolvidable! 🌹`;
     
     sendWhatsApp(msg);
   };
 
-  // NUEVO: Comprobante de Reserva por TEXTO (Sin PDF)
   const handleWhatsAppReserva = () => {
-    const cancionesTxt = s.canciones?.length > 0 ? s.canciones.join(', ') : 'A elección del cliente';
-    const msg = `🎺 EL MARIACHI AVENTURERO
+    // CON CANCIONES y LISTA NUMERADA
+    let cancionesTxt = 'A elección del cliente';
+    if (s.canciones?.length > 0) {
+      cancionesTxt = '\n' + s.canciones.map((c: string, i: number) => `${i + 1}.- ${c}`).join('\n');
+    }
+
+    const msg = `🎺 *EL MARIACHI AVENTURERO*
 ━━━━━━━━━━━━━━━━━━━
-✅ CONFIRMACIÓN DE RESERVA
+✅ *CONFIRMACIÓN DE RESERVA*
 
-Hola ${s.nombre_cliente}, tu reserva ha sido agendada con éxito.
+Hola *${s.nombre_cliente}*, tu reserva ha sido agendada con éxito.
 
-DETALLES DE LA CITA:
-• Para: ${s.nombre_festejada}
-• Motivo: ${s.motivo || 'Evento Especial'}
-• Fecha: ${s.fecha.split('-').reverse().join('-')}
-• Hora: ${s.hora}
-• Dirección: ${s.direccion}, ${s.comuna}
-• Repertorio: ${cancionesTxt}
+*DETALLES DE LA CITA:*
+• *Para:* ${s.nombre_festejada}
+• *Motivo:* ${s.motivo || 'Evento Especial'}
+• *Fecha:* ${s.fecha.split('-').reverse().join('-')}
+• *Hora:* ${s.hora}
+• *Dirección:* ${s.direccion}, ${s.comuna}
+• *Repertorio:* ${cancionesTxt}
 
-VALOR DEL SERVICIO: $${s.precio_total?.toLocaleString()}
+*VALOR DEL SERVICIO:* $${s.precio_total?.toLocaleString()}
 
 ¡Muchas gracias por su confianza! Será un gusto acompañarles con nuestra música. 🎸🌹`;
     
@@ -94,7 +115,6 @@ VALOR DEL SERVICIO: $${s.precio_total?.toLocaleString()}
     let phone = s.telefono || '';
     phone = phone.replace(/\D/g, '');
     if (!phone.startsWith('56')) phone = '56' + phone;
-    // Usar encodeURIComponent para que los saltos de línea se mantengan
     const url = `whatsapp://send?phone=${phone}&text=${encodeURIComponent(text)}`;
     Linking.openURL(url);
   };
@@ -148,11 +168,50 @@ VALOR DEL SERVICIO: $${s.precio_total?.toLocaleString()}
              <FileText size={18} color="#D4AF37" />
           </TouchableOpacity>
           <TouchableOpacity style={[styles.btnAction, {backgroundColor: s.estado === 'completada' ? '#2ecc71' : '#D4AF37'}]} onPress={handleStatusToggle}>
-             {s.estado === 'completada' ? <Check size={20} color="#000" /> : <Check size={20} color="#000" />}
+             <Check size={20} color="#000" />
              <Text style={styles.btnLabel}>{s.estado === 'completada' ? 'FINALIZADA' : 'FINALIZAR'}</Text>
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* MODAL REGISTRAR PAGO */}
+      <Modal visible={showPaymentModal} animationType="fade" transparent={true}>
+        <View style={styles.paymentOverlay}>
+          <View style={styles.paymentModal}>
+             <View style={styles.paymentHeader}>
+                <Text style={styles.paymentTitle}>REGISTRAR PAGO</Text>
+                <TouchableOpacity onPress={() => setShowPaymentModal(false)}><X color="#666" /></TouchableOpacity>
+             </View>
+             
+             <Text style={styles.paymentLabel}>MONTO RECIBIDO</Text>
+             <TextInput 
+                style={styles.paymentInput} 
+                keyboardType="numeric" 
+                value={montoPago} 
+                onChangeText={setMontoPago}
+                placeholder="Ej: 40000"
+                placeholderTextColor="#444"
+             />
+
+             <Text style={styles.paymentLabel}>MEDIO DE PAGO</Text>
+             <View style={styles.paymentMethods}>
+                {['Transferencia', 'Efectivo'].map(m => (
+                  <TouchableOpacity 
+                    key={m} 
+                    style={[styles.methodBtn, medioPago === m && styles.methodBtnActive]} 
+                    onPress={() => setMedioPago(m)}
+                  >
+                    <Text style={[styles.methodText, medioPago === m && styles.methodTextActive]}>{m}</Text>
+                  </TouchableOpacity>
+                ))}
+             </View>
+
+             <TouchableOpacity style={styles.confirmPayBtn} onPress={confirmFinalization}>
+                <Text style={styles.confirmPayText}>CONFIRMAR Y FINALIZAR</Text>
+             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -181,5 +240,18 @@ const styles = StyleSheet.create({
   priceValue: { color: '#2ecc71', fontSize: 18, fontWeight: 'bold' },
   buttonGroup: { flexDirection: 'row', gap: 10 },
   btnAction: { height: 45, paddingHorizontal: 15, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  btnLabel: { color: '#000', fontWeight: 'bold', fontSize: 12 }
+  btnLabel: { color: '#000', fontWeight: 'bold', fontSize: 12 },
+  paymentOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', padding: 30 },
+  paymentModal: { backgroundColor: '#111', borderRadius: 25, padding: 25, borderWidth: 1, borderColor: '#222' },
+  paymentHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  paymentTitle: { color: '#D4AF37', fontWeight: 'bold', fontSize: 16 },
+  paymentLabel: { color: '#444', fontSize: 10, fontWeight: 'bold', marginBottom: 10, marginTop: 10 },
+  paymentInput: { backgroundColor: '#1A1A1A', padding: 15, borderRadius: 12, color: '#FFF', fontSize: 18, fontWeight: 'bold' },
+  paymentMethods: { flexDirection: 'row', gap: 10, marginTop: 5 },
+  methodBtn: { flex: 1, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#222', alignItems: 'center' },
+  methodBtnActive: { backgroundColor: '#D4AF37', borderColor: '#D4AF37' },
+  methodText: { color: '#666', fontWeight: 'bold', fontSize: 11 },
+  methodTextActive: { color: '#000' },
+  confirmPayBtn: { backgroundColor: '#2ecc71', padding: 18, borderRadius: 15, alignItems: 'center', marginTop: 25 },
+  confirmPayText: { color: '#000', fontWeight: 'bold' }
 });

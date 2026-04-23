@@ -37,24 +37,33 @@ const formatToDMY = (dateStr: string) => {
 };
 
 // MODAL DE CANCIONES
-const SongPickerModal = ({ visible, canciones, onClose, onToggle }: any) => {
+const SongPickerModal = ({ visible, canciones, onClose, onToggle, limit }: any) => {
   const [search, setSearch] = useState('');
   const filteredSongs = useMemo(() => {
     return LISTADO_CANCIONES.filter(s => s.toLowerCase().includes(search.toLowerCase()));
   }, [search]);
+
+  const handleSelect = (s: string) => {
+    onToggle(s);
+    setSearch(''); // Auto-reset search on selection
+  };
+
   return (
     <Modal visible={visible} animationType="slide" transparent={true}>
        <View style={styles.pickerOverlay}>
         <ImageBackground source={require('../../assets/fondo_app.jpg')} style={{ flex: 1 }} resizeMode="cover">
         <View style={[styles.bgOverlay, { borderTopLeftRadius: 30, borderTopRightRadius: 30 }]}>
             <View style={styles.pickerHeader}>
-                <View><Text style={styles.pickerTitle}>Repertorio</Text><Text style={styles.pickerSubtitle}>{canciones.length} elegidas</Text></View>
+                <View>
+                  <Text style={styles.pickerTitle}>Repertorio</Text>
+                  <Text style={styles.pickerSubtitle}>{canciones.length} de {limit || '...'} elegidas</Text>
+                </View>
                 <TouchableOpacity style={styles.pickerDoneBtn} onPress={onClose}><Text style={styles.pickerDoneText}>Listo</Text></TouchableOpacity>
             </View>
             <TextInput style={styles.pickerSearch} placeholder="Buscar canción..." placeholderTextColor="#666" value={search} onChangeText={setSearch} />
             <ScrollView style={{ flex: 1, padding: 20 }}>
                 {filteredSongs.map(s => (
-                    <TouchableOpacity key={s} style={[styles.songItem, canciones.includes(s) && styles.songActive]} onPress={() => onToggle(s)}>
+                    <TouchableOpacity key={s} style={[styles.songItem, canciones.includes(s) && styles.songActive]} onPress={() => handleSelect(s)}>
                         <Text style={[styles.songText, canciones.includes(s) && styles.whiteText]}>{s}</Text>
                         {canciones.includes(s) && <Check size={16} color="#000" />}
                     </TouchableOpacity>
@@ -104,7 +113,7 @@ export default function AgendaScreen() {
   const [showComunaPicker, setShowComunaPicker] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterMode, setFilterMode] = useState('todas');
+  const [filterMode, setFilterMode] = useState('pendientes');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
@@ -255,7 +264,24 @@ export default function AgendaScreen() {
         </View>
       </Modal>
 
-      <SongPickerModal visible={showSongPicker} canciones={canciones} onClose={() => setShowSongPicker(false)} onToggle={(s: string) => canciones.includes(s) ? setCanciones(canciones.filter(c => c !== s)) : setCanciones([...canciones, s])} />
+      <SongPickerModal 
+        visible={showSongPicker} 
+        canciones={canciones} 
+        onClose={() => setShowSongPicker(false)} 
+        limit={tipo === 'express' ? 2 : tipo === 'full' ? 4 : null}
+        onToggle={(s: string) => {
+          if (canciones.includes(s)) {
+            setCanciones(canciones.filter(c => c !== s));
+          } else {
+            const limit = tipo === 'express' ? 2 : tipo === 'full' ? 4 : 99;
+            if (canciones.length >= limit) {
+              Alert.alert('Límite alcanzado', `La serenata ${tipo} permite máximo ${limit} canciones.`);
+              return;
+            }
+            setCanciones([...canciones, s]);
+          }
+        }} 
+      />
       <ComunaPickerModal visible={showComunaPicker} onSelect={setComuna} onClose={() => setShowComunaPicker(false)} />
     </SafeAreaView>
   );
@@ -264,9 +290,9 @@ export default function AgendaScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
   bgOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)' },
-  header: { padding: 25, paddingTop: 10 },
-  headerTitle: { color: '#FFF', fontSize: 28, fontWeight: 'bold' },
-  headerSubtitle: { color: '#D4AF37', fontSize: 11, fontWeight: 'bold' },
+  header: { padding: 30, paddingTop: 20, alignItems: 'center' },
+  headerTitle: { color: '#FFF', fontSize: 32, fontWeight: 'bold', letterSpacing: 2 },
+  headerSubtitle: { color: '#D4AF37', fontSize: 10, fontWeight: 'bold', letterSpacing: 5, marginTop: 5 },
   searchBarWrapper: { paddingHorizontal: 25, marginBottom: 15 },
   searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#111', borderRadius: 15, paddingHorizontal: 15, height: 50 },
   searchBarInput: { flex: 1, color: '#FFF', marginLeft: 10 },

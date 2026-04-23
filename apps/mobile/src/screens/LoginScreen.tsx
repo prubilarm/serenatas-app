@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   StyleSheet, 
   View, 
@@ -9,10 +9,87 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
-  ImageBackground
+  ImageBackground,
+  Animated,
+  Easing
 } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { Music, Lock, Mail } from 'lucide-react-native';
+
+const FloatingNote = ({ delay }: { delay: number }) => {
+  const moveAnim = useRef(new Animated.Value(0)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const startAnimation = () => {
+      moveAnim.setValue(0);
+      opacityAnim.setValue(0);
+      scaleAnim.setValue(0.5);
+      rotateAnim.setValue(0);
+
+      Animated.sequence([
+        Animated.delay(delay),
+        Animated.parallel([
+          Animated.timing(moveAnim, {
+            toValue: -150,
+            duration: 3000,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacityAnim, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(scaleAnim, {
+            toValue: 1.5,
+            duration: 3000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(rotateAnim, {
+            toValue: 1,
+            duration: 3000,
+            useNativeDriver: true,
+          })
+        ])
+      ]).start(() => startAnimation());
+    };
+
+    startAnimation();
+  }, []);
+
+  const rotate = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '45deg']
+  });
+
+  const translateX = rotateAnim.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0, 20, -20]
+  });
+
+  return (
+    <Animated.View style={[
+      styles.floatingNote,
+      {
+        opacity: opacityAnim.interpolate({
+          inputRange: [0, 0.5, 1],
+          outputRange: [0, 1, 0]
+        }),
+        transform: [
+          { translateY: moveAnim },
+          { translateX: translateX },
+          { scale: scaleAnim },
+          { rotate: rotate }
+        ]
+      }
+    ]}>
+      <Music color="#D4AF37" size={16} />
+    </Animated.View>
+  );
+};
 
 export default function LoginScreen({ onLogin }: any) {
   const [email, setEmail] = useState('');
@@ -48,6 +125,9 @@ export default function LoginScreen({ onLogin }: any) {
             <View style={styles.logoContainer}>
               <View style={styles.iconCircle}>
                 <Music color="#D4AF37" size={50} />
+                <FloatingNote delay={0} />
+                <FloatingNote delay={1000} />
+                <FloatingNote delay={2000} />
               </View>
               <Text style={styles.title}>EL MARIACHI</Text>
               <Text style={styles.subtitle}>AVENTURERO</Text>
@@ -112,7 +192,7 @@ const styles = StyleSheet.create({
   },
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.65)', // Oscurecemos la imagen para legibilidad
+    backgroundColor: 'rgba(0,0,0,0.65)',
   },
   container: {
     flex: 1,
@@ -139,6 +219,9 @@ const styles = StyleSheet.create({
     shadowColor: '#D4AF37',
     shadowRadius: 20,
     shadowOpacity: 0.2,
+  },
+  floatingNote: {
+    position: 'absolute',
   },
   title: {
     color: '#D4AF37',

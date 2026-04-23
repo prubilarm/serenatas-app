@@ -17,9 +17,10 @@ import {
 } from 'lucide-react';
 
 const menuItems = [
-  { icon: LayoutDashboard, label: 'Resumen', href: '/' },
+  { icon: LayoutDashboard, label: 'Inicio', href: '/' },
   { icon: Calendar,        label: 'Agenda',    href: '/agenda' },
   { icon: Music,           label: 'Serenatas', href: '/serenatas' },
+  { icon: CheckCircle,     label: 'Finalizadas', href: '/serenatas?estado=finalizada' },
   { icon: CreditCard,      label: 'Caja',     href: '/pagos' },
   { icon: Users,           label: 'Clientes',  href: '/clientes' },
   { icon: FileText,        label: 'Reportes',  href: '/reportes' },
@@ -46,8 +47,8 @@ const Sidebar = () => {
   };
 
   const NavLinks = ({ onClose }: { onClose?: () => void }) => (
-    <nav className="flex-1 px-4 py-4">
-      <ul className="space-y-1">
+    <nav className="flex-1 px-5 py-6">
+      <ul className="space-y-2">
         {menuItems.map((item) => {
           const isActive = pathname === item.href;
           return (
@@ -55,14 +56,14 @@ const Sidebar = () => {
               <Link
                 href={item.href}
                 onClick={onClose}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                className={`flex items-center gap-5 px-5 py-4 rounded-2xl transition-all ${
                   isActive
                     ? 'text-[var(--accent-gold)] bg-white/5 border-l-2 border-[var(--accent-gold)]'
                     : 'text-white/40 hover:text-white'
                 }`}
               >
-                <item.icon size={18} className={isActive ? 'text-[var(--accent-gold)]' : 'opacity-40'} />
-                <span className="font-bold text-sm tracking-tight">{item.label}</span>
+                <item.icon size={20} className={isActive ? 'text-[var(--accent-gold)]' : 'opacity-30'} strokeWidth={isActive ? 2.5 : 1.5} />
+                <span className="font-black text-[11px] uppercase tracking-[0.1em]">{item.label}</span>
               </Link>
             </li>
           );
@@ -115,12 +116,14 @@ const Sidebar = () => {
 
       {/* BOTTOM NAV MÓVIL */}
       <nav className="bottom-nav xl:hidden">
-        {menuItems.slice(0, 5).map((item) => {
+        {menuItems.slice(1, 6).map((item) => {
           const isActive = pathname === item.href;
           return (
-            <Link key={item.href} href={item.href} className={`flex-1 flex flex-col items-center justify-center gap-1 ${isActive ? 'text-[var(--accent-gold)]' : 'text-white/20'}`}>
-              <item.icon size={20} />
-              <span className="text-[9px] font-bold uppercase tracking-tighter">{item.label}</span>
+            <Link key={item.href} href={item.href} className={`flex-1 flex flex-col items-center justify-center gap-1.5 ${isActive ? 'text-[var(--accent-gold)]' : 'text-white/30'}`}>
+              <div className={`p-1.5 rounded-lg ${isActive ? 'bg-[var(--accent-gold)]/10' : ''}`}>
+                <item.icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+              </div>
+              <span className={`text-[8px] font-bold uppercase tracking-tight ${isActive ? 'text-[var(--accent-gold)]' : ''}`}>{item.label}</span>
             </Link>
           );
         })}
