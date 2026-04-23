@@ -237,6 +237,7 @@ export default function AgendaScreen() {
                         <TextInput style={styles.input} placeholder="Nombre del Cliente" placeholderTextColor="#555" value={nombreCliente} onChangeText={setNombreCliente} selectionColor="#D4AF37" />
                         <TextInput style={styles.input} placeholder="Número de Celular (+56...)" placeholderTextColor="#555" value={telefono} onChangeText={setTelefono} keyboardType="phone-pad" selectionColor="#D4AF37" />
                         <TextInput style={styles.input} placeholder="Nombre de la Festejada" placeholderTextColor="#555" value={festejada} onChangeText={setFestejada} selectionColor="#D4AF37" />
+                        <TextInput style={styles.input} placeholder="Motivo (Ej: Cumpleaños, Aniversario)" placeholderTextColor="#555" value={motivo} onChangeText={setMotivo} selectionColor="#D4AF37" />
                         
                         <Text style={styles.sectionTitle}>Cita & Comuna</Text>
                         <View style={styles.row}>
