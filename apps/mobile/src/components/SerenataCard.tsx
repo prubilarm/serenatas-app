@@ -1,298 +1,136 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Linking, Alert } from 'react-native';
-import { Phone, MessageSquare, MapPin, Music, CheckCircle, Trash2, Edit3, FileText } from 'lucide-react-native';
+import { Phone, MessageSquare, MapPin, Music, CheckCircle, Trash2, Edit3, FileText, Share2 } from 'lucide-react-native';
 import { supabase } from '../lib/supabase';
 
 const API_BASE = 'https://api-alpha-five-25.vercel.app';
 
 const SerenataCard = ({ serenata, onUpdate, onEdit }: any) => {
+  
+  // 🧭 ARREGLO MAPA: Asegurar que el query sea ultra preciso
+  const handleMaps = () => {
+    const query = encodeURIComponent(`${serenata.direccion}, ${serenata.comuna}`);
+    const url = Platform.select({
+      ios: `maps:0,0?q=${query}`,
+      android: `geo:0,0?q=${query}`,
+      default: `https://www.google.com/maps/search/?api=1&query=${query}`
+    });
+    
+    Linking.canOpenURL(url).then(supported => {
+      if (supported) {
+        Linking.openURL(url);
+      } else {
+        Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`);
+      }
+    });
+  };
+
   const handleCall = () => {
-    if (!serenata.telefono) return Alert.alert('Error', 'No hay teléfono registrado.');
+    if (!serenata.telefono) return Alert.alert('Error', 'Sin teléfono.');
     Linking.openURL(`tel:${serenata.telefono}`);
   };
 
-  const handleWhatsAppSimple = () => {
-    if (!serenata.telefono) return Alert.alert('Error', 'No hay teléfono registrado.');
+  // 📝 UNIFICADO: Generar Comprobante PDF y enviar por WhatsApp Automáticamente
+  const handleWhatsAppPDF = () => {
+    if (!serenata.telefono) return Alert.alert('Error', 'No hay teléfono registrado para enviar comprobante.');
+    
     const clean = serenata.telefono.replace(/[^0-9]/g, '');
     const num = clean.startsWith('56') ? clean : `56${clean}`;
-    const msg = encodeURIComponent(
-      `Hola, soy del Mariachi Aventurero. Estoy confirmando la serenata para ${serenata.nombre_festejada}.`
-    );
-    Linking.openURL(`https://wa.me/${num}?text=${msg}`);
-  };
-
-  const handleWhatsAppComprobante = async () => {
-    if (!serenata.telefono) return Alert.alert('Error', 'No hay teléfono registrado.');
-    const clean = serenata.telefono.replace(/[^0-9]/g, '');
-    const num = clean.startsWith('56') ? clean : `56${clean}`;
-
-    const fechaFormateada = (() => {
-      if (!serenata.fecha) return serenata.fecha;
-      const [year, month, day] = serenata.fecha.split('-');
-      const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
-                     'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-      return `${day} de ${meses[parseInt(month) - 1]} de ${year}`;
-    })();
-
-    const tipoLabel = serenata.tipo === 'full'
-      ? 'Serenata Completa (4 canciones)'
-      : 'Serenata Express (2 canciones)';
-
-    const cancionesText = serenata.canciones && serenata.canciones.length > 0
-      ? serenata.canciones.map((c: string, i: number) => `${i + 1}. ${c}`).join('\n')
-      : 'A elección en el momento';
-
     const pdfUrl = `${API_BASE}/api/reportes/serenata/${serenata.id}`;
+    
+    const [y, m, d] = serenata.fecha.split('-');
+    const fechaFormateada = `${d}-${m}-${y}`;
+
     const msg = encodeURIComponent(
       `🎺 *EL MARIACHI AVENTURERO*\n` +
       `━━━━━━━━━━━━━━━━━━━\n` +
       `✅ *COMPROBANTE DE RESERVA*\n` +
       `━━━━━━━━━━━━━━━━━━━\n\n` +
-      `Hola ${serenata.nombre_cliente || ''}, adjuntamos el link a tu comprobante de reserva para la serenata de ${serenata.nombre_festejada}.\n\n` +
-      `📄 *Ver Comprobante:* ${pdfUrl}\n\n` +
+      `Hola *${serenata.nombre_cliente || 'Cliente'}*, te enviamos el comprobante oficial de tu reserva para la serenata de *${serenata.nombre_festejada}*.\n\n` +
+      `📄 *VER COMPROBANTE:* ${pdfUrl}\n\n` +
       `📅 *Fecha:* ${fechaFormateada}\n` +
-      `⏰ *Hora:* ${serenata.hora || ''}\n` +
-      `📍 *Ubicación:* ${serenata.direccion}\n\n` +
-      `¡Gracias por preferirnos! 🌹`
+      `⏰ *Hora:* ${serenata.hora || 'A convenir'}\n` +
+      `📍 *Dirección:* ${serenata.direccion}\n\n` +
+      `¡Muchas gracias por confiar en nuestra música! 🌹`
     );
 
     Linking.openURL(`https://wa.me/${num}?text=${msg}`);
   };
 
-  const handleMaps = () => {
-    Linking.openURL(
-      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-        serenata.direccion + ', ' + serenata.comuna
-      )}`
-    );
-  };
-
-  const handlePDF = () => {
-    const pdfUrl = `${API_BASE}/api/reportes/serenata/${serenata.id}`;
-    Linking.openURL(pdfUrl);
-  };
-
   const handleComplete = async () => {
-    const { error } = await supabase
-      .from('serenatas')
-      .update({ estado: 'completada' })
-      .eq('id', serenata.id);
+    const { error } = await supabase.from('serenatas').update({ estado: 'completada' }).eq('id', serenata.id);
     if (!error && onUpdate) onUpdate();
   };
 
   const handleDelete = () => {
-    Alert.alert(
-      'Eliminar Serenata',
-      '¿Estás seguro de que quieres borrar esta serenata?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            await supabase.from('serenatas').delete().eq('id', serenata.id);
-            if (onUpdate) onUpdate();
-          },
-        },
-      ]
-    );
+    Alert.alert('Eliminar', '¿Borrar esta serenata?', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Eliminar', style: 'destructive', onPress: async () => {
+          await supabase.from('serenatas').delete().eq('id', serenata.id);
+          if (onUpdate) onUpdate();
+      }}
+    ]);
   };
 
   return (
     <View style={styles.card}>
-      {/* Header */}
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
           <Text style={styles.festejada}>{serenata.nombre_festejada}</Text>
           <Text style={styles.motivo}>{serenata.motivo}</Text>
-          {serenata.nombre_cliente && (
-            <Text style={styles.contrata}>Contrata: {serenata.nombre_cliente}</Text>
-          )}
+          <Text style={styles.contrata}>Cliente: {serenata.nombre_cliente}</Text>
         </View>
-        <View>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{serenata.hora}</Text>
-          </View>
-          {serenata.precio_total && (
-            <Text style={styles.precio}>${serenata.precio_total.toLocaleString('es-CL')}</Text>
-          )}
+        <View style={styles.timeBadge}>
+           <Text style={styles.timeText}>{serenata.hora}</Text>
         </View>
       </View>
 
-      {/* Dirección */}
-      <TouchableOpacity style={styles.direccionRow} onPress={handleMaps}>
-        <MapPin size={13} color="#D4AF37" />
-        <Text style={styles.direccion}>{serenata.direccion}, {serenata.comuna}</Text>
+      <TouchableOpacity style={styles.mapBtn} onPress={handleMaps}>
+        <MapPin size={14} color="#D4AF37" />
+        <Text style={styles.mapText}>{serenata.direccion}, {serenata.comuna}</Text>
       </TouchableOpacity>
 
-      {/* Canciones preview */}
-      {serenata.canciones && serenata.canciones.length > 0 && (
-        <View style={styles.songsPreview}>
-          <Music size={13} color="#D4AF37" />
-          <Text style={styles.songsText} numberOfLines={1}>
-            {serenata.canciones.join('  ·  ')}
-          </Text>
-        </View>
-      )}
-
-      {/* Fila de acciones */}
       <View style={styles.actions}>
-        <TouchableOpacity style={styles.actionBtn} onPress={handleCall}>
-          <Phone size={18} color="#D4AF37" />
-          <Text style={styles.actionText}>Llamar</Text>
+        <TouchableOpacity style={styles.actionItem} onPress={handleCall}>
+          <View style={[styles.iconCircle, { backgroundColor: '#4285F4' }]}><Phone size={18} color="#FFF" /></View>
+          <Text style={styles.actionLabel}>Llamar</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionBtn} onPress={handleWhatsAppSimple}>
-          <MessageSquare size={18} color="#25D366" />
-          <Text style={styles.actionText}>WApp</Text>
+        <TouchableOpacity style={styles.actionItem} onPress={handleWhatsAppPDF}>
+          <View style={[styles.iconCircle, { backgroundColor: '#25D366' }]}><MessageSquare size={18} color="#FFF" /></View>
+          <Text style={styles.actionLabel}>Comprobante</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionBtn} onPress={handlePDF}>
-          <FileText size={18} color="#FF6B6B" />
-          <Text style={styles.actionText}>PDF</Text>
+        <TouchableOpacity style={styles.actionItem} onPress={onEdit}>
+          <View style={[styles.iconCircle, { backgroundColor: '#666' }]}><Edit3 size={18} color="#FFF" /></View>
+          <Text style={styles.actionLabel}>Editar</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionBtn} onPress={onEdit}>
-          <Edit3 size={18} color="#4285F4" />
-          <Text style={styles.actionText}>Editar</Text>
+        <TouchableOpacity style={styles.actionItem} onPress={serenata.estado === 'completada' ? handleDelete : handleComplete}>
+          <View style={[styles.iconCircle, { backgroundColor: serenata.estado === 'completada' ? '#FF4444' : '#25D366' }]}>
+            {serenata.estado === 'completada' ? <Trash2 size={18} color="#FFF" /> : <CheckCircle size={18} color="#FFF" />}
+          </View>
+          <Text style={styles.actionLabel}>{serenata.estado === 'completada' ? 'Borrar' : 'Listo'}</Text>
         </TouchableOpacity>
-
-        {serenata.estado !== 'completada' ? (
-          <TouchableOpacity style={styles.actionBtn} onPress={handleComplete}>
-            <CheckCircle size={18} color="#25D366" />
-            <Text style={styles.actionText}>Listo</Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity style={styles.actionBtn} onPress={handleDelete}>
-            <Trash2 size={18} color="#FF4444" />
-            <Text style={styles.actionText}>Borrar</Text>
-          </TouchableOpacity>
-        )}
       </View>
-
-      {/* Botón WhatsApp Comprobante — destacado */}
-      <TouchableOpacity style={styles.whatsappComprobanteBtn} onPress={handleWhatsAppComprobante}>
-        <MessageSquare size={16} color="#FFF" />
-        <Text style={styles.whatsappComprobanteText}>Enviar Comprobante por WhatsApp</Text>
-      </TouchableOpacity>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 18,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  festejada: {
-    color: '#D4AF37',
-    fontSize: 19,
-    fontWeight: 'bold',
-    letterSpacing: 0.3,
-  },
-  motivo: {
-    color: 'rgba(255,255,255,0.45)',
-    fontSize: 11,
-    textTransform: 'uppercase',
-    marginTop: 2,
-    letterSpacing: 1,
-  },
-  contrata: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 12,
-    marginTop: 4,
-    fontStyle: 'italic',
-  },
-  badge: {
-    backgroundColor: '#D4AF37',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  badgeText: {
-    color: '#000',
-    fontWeight: 'bold',
-    fontSize: 13,
-  },
-  precio: {
-    color: '#D4AF37',
-    fontWeight: 'bold',
-    fontSize: 12,
-    textAlign: 'center',
-    marginTop: 4,
-  },
-  direccionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 8,
-  },
-  direccion: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 12,
-    flex: 1,
-  },
-  songsPreview: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(212,175,55,0.06)',
-    padding: 8,
-    borderRadius: 8,
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(212,175,55,0.15)',
-  },
-  songsText: {
-    color: 'rgba(255,255,255,0.45)',
-    fontSize: 11,
-    flex: 1,
-  },
-  actions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
-    paddingTop: 14,
-    marginBottom: 12,
-  },
-  actionBtn: {
-    alignItems: 'center',
-    gap: 4,
-    flex: 1,
-  },
-  actionText: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 9,
-    fontWeight: 'bold',
-  },
-  whatsappComprobanteBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#25D366',
-    paddingVertical: 11,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-  },
-  whatsappComprobanteText: {
-    color: '#FFF',
-    fontWeight: 'bold',
-    fontSize: 13,
-    letterSpacing: 0.3,
-  },
+  card: { backgroundColor: '#111', borderRadius: 20, padding: 20, marginBottom: 15, borderWidth: 1, borderColor: '#222' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 },
+  festejada: { color: '#D4AF37', fontSize: 18, fontWeight: 'bold' },
+  motivo: { color: '#666', fontSize: 11, textTransform: 'uppercase', marginBottom: 2 },
+  contrata: { color: '#888', fontSize: 13 },
+  timeBadge: { backgroundColor: '#D4AF37', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, height: 32 },
+  timeText: { color: '#000', fontWeight: 'bold', fontSize: 14 },
+  mapBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 20, backgroundColor: '#1a1a1a', padding: 10, borderRadius: 12 },
+  mapText: { color: '#D4AF37', fontSize: 12, flex: 1 },
+  actions: { flexDirection: 'row', justifyContent: 'space-around', borderTopWidth: 1, borderTopColor: '#222', paddingTop: 15 },
+  actionItem: { alignItems: 'center', gap: 6 },
+  iconCircle: { width: 42, height: 42, borderRadius: 21, justifyContent: 'center', alignItems: 'center' },
+  actionLabel: { color: '#666', fontSize: 10, fontWeight: 'bold' }
 });
 
 export default SerenataCard;

@@ -5,14 +5,20 @@ import {
   Text, 
   ScrollView, 
   TouchableOpacity, 
-  ActivityIndicator,
-  RefreshControl,
-  SafeAreaView,
-  Modal,
-  TextInput,
-  Alert
+  ActivityIndicator, 
+  RefreshControl, 
+  SafeAreaView, 
+  Modal, 
+  TextInput, 
+  Alert,
+  Platform
 } from 'react-native';
-import { Plus, Music, X, Calendar, MapPin, DollarSign, User, Check, Trash2, ListMusic, Search, ChevronDown, ChevronRight } from 'lucide-react-native';
+import { 
+  Plus, Music, X, Calendar as CalendarIcon, MapPin, 
+  DollarSign, User, Check, Trash2, ListMusic, 
+  Search, ChevronDown, ChevronRight, Clock 
+} from 'lucide-react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { supabase } from '../lib/supabase';
 import SerenataCard from '../components/SerenataCard';
 
@@ -34,7 +40,6 @@ const LISTADO_CANCIONES = [
   "Yo te extrañará",
 ].sort((a, b) => a.localeCompare(b));
 
-// Agrupa canciones por letra inicial
 const groupByLetter = (songs: string[]) => {
   const groups: { [key: string]: string[] } = {};
   songs.forEach(song => {
@@ -45,142 +50,76 @@ const groupByLetter = (songs: string[]) => {
   return groups;
 };
 
-interface SongPickerModalProps {
-  visible: boolean;
-  canciones: string[];
-  onClose: () => void;
-  onToggle: (song: string) => void;
-}
+// ── FORMATTER PARA FECHA dd-mm-aaaa ──
+const formatToDMY = (dateStr: string) => {
+  if (!dateStr) return '';
+  // Si viene como yyyy-mm-dd
+  if (dateStr.includes('-') && dateStr.split('-')[0].length === 4) {
+    const [y, m, d] = dateStr.split('-');
+    return `${d}-${m}-${y}`;
+  }
+  return dateStr;
+};
 
-const SongPickerModal = ({ visible, canciones, onClose, onToggle }: SongPickerModalProps) => {
+// ── COMPONENTE PICKER DE CANCIONES ──
+const SongPickerModal = ({ visible, canciones, onClose, onToggle }: any) => {
   const [search, setSearch] = useState('');
   const [openLetters, setOpenLetters] = useState<Set<string>>(new Set());
+  const grouped = useMemo(() => groupByLetter(LISTADO_CANCIONES), []);
 
   const filteredSongs = useMemo(() => {
-    if (!search.trim()) return null; // null = usar modo acordeón
-    return LISTADO_CANCIONES.filter(s =>
-      s.toLowerCase().includes(search.toLowerCase())
-    );
+    if (!search.trim()) return null;
+    return LISTADO_CANCIONES.filter(s => s.toLowerCase().includes(search.toLowerCase()));
   }, [search]);
-
-  const grouped = useMemo(() => groupByLetter(LISTADO_CANCIONES), []);
 
   const toggleLetter = (letter: string) => {
     setOpenLetters(prev => {
       const next = new Set(prev);
-      if (next.has(letter)) next.delete(letter);
-      else next.add(letter);
+      if (next.has(letter)) next.delete(letter); else next.add(letter);
       return next;
     });
-  };
-
-  const handleClose = () => {
-    setSearch('');
-    setOpenLetters(new Set());
-    onClose();
-  };
-
-  const renderSongRow = (song: string, idx: number) => {
-    const selected = canciones.includes(song);
-    return (
-      <TouchableOpacity
-        key={`${song}-${idx}`}
-        style={[styles.songItem, selected && styles.songItemSelected]}
-        onPress={() => onToggle(song)}
-        activeOpacity={0.7}
-      >
-        <Text style={[styles.songItemText, selected && styles.songItemTextSelected]}>
-          {song}
-        </Text>
-        {selected && (
-          <View style={styles.songCheck}>
-            <Check size={13} color="#000" />
-          </View>
-        )}
-      </TouchableOpacity>
-    );
   };
 
   return (
     <Modal visible={visible} animationType="slide" transparent={true}>
       <View style={styles.pickerOverlay}>
         <View style={styles.pickerSheet}>
-          {/* Header del picker */}
           <View style={styles.pickerHandle} />
           <View style={styles.pickerHeader}>
             <View>
               <Text style={styles.pickerTitle}>Repertorio</Text>
-              <Text style={styles.pickerSubtitle}>
-                {canciones.length} canción{canciones.length !== 1 ? 'es' : ''} seleccionada{canciones.length !== 1 ? 's' : ''}
-              </Text>
+              <Text style={styles.pickerSubtitle}>{canciones.length} seleccionadas</Text>
             </View>
-            <TouchableOpacity style={styles.pickerDoneBtn} onPress={handleClose}>
+            <TouchableOpacity style={styles.pickerDoneBtn} onPress={onClose}>
               <Text style={styles.pickerDoneText}>Listo</Text>
             </TouchableOpacity>
           </View>
-
-          {/* Buscador */}
           <View style={styles.searchContainer}>
             <Search size={16} color="#D4AF37" />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Buscar canción..."
-              placeholderTextColor="#666"
-              value={search}
-              onChangeText={setSearch}
-              autoCorrect={false}
-            />
-            {search.length > 0 && (
-              <TouchableOpacity onPress={() => setSearch('')}>
-                <X size={16} color="#666" />
-              </TouchableOpacity>
-            )}
+            <TextInput style={styles.searchInput} placeholder="Buscar canción..." placeholderTextColor="#666" value={search} onChangeText={setSearch} autoCorrect={false} />
           </View>
-
           <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
             {filteredSongs !== null ? (
-              // ── Modo búsqueda: lista plana filtrada ──
-              filteredSongs.length > 0 ? (
-                filteredSongs.map((song, idx) => renderSongRow(song, idx))
-              ) : (
-                <View style={styles.noResults}>
-                  <Music size={32} color="rgba(255,255,255,0.1)" />
-                  <Text style={styles.noResultsText}>Sin resultados para "{search}"</Text>
-                </View>
-              )
+              filteredSongs.map((song, idx) => (
+                <TouchableOpacity key={idx} style={[styles.songItem, canciones.includes(song) && styles.songItemSelected]} onPress={() => onToggle(song)}>
+                  <Text style={[styles.songItemText, canciones.includes(song) && styles.songItemTextSelected]}>{song}</Text>
+                </TouchableOpacity>
+              ))
             ) : (
-              // ── Modo acordeón por letra ──
-              Object.keys(grouped).sort().map(letter => {
-                const isOpen = openLetters.has(letter);
-                const songs = grouped[letter];
-                const selectedCount = songs.filter(s => canciones.includes(s)).length;
-                return (
-                  <View key={letter} style={styles.letterGroup}>
-                    <TouchableOpacity
-                      style={styles.letterHeader}
-                      onPress={() => toggleLetter(letter)}
-                      activeOpacity={0.7}
-                    >
-                      <View style={styles.letterBadge}>
-                        <Text style={styles.letterBadgeText}>{letter}</Text>
-                      </View>
-                      <Text style={styles.letterLabel}>
-                        {songs.length} canción{songs.length !== 1 ? 'es' : ''}
-                      </Text>
-                      {selectedCount > 0 && (
-                        <View style={styles.selectedBadge}>
-                          <Text style={styles.selectedBadgeText}>{selectedCount} ✓</Text>
-                        </View>
-                      )}
-                      <View style={{ flex: 1 }} />
-                      {isOpen
-                        ? <ChevronDown size={18} color="#D4AF37" />
-                        : <ChevronRight size={18} color="#666" />}
+              Object.keys(grouped).sort().map(letter => (
+                <View key={letter} style={styles.letterGroup}>
+                  <TouchableOpacity style={styles.letterHeader} onPress={() => toggleLetter(letter)}>
+                    <View style={styles.letterBadge}><Text style={styles.letterBadgeText}>{letter}</Text></View>
+                    <Text style={styles.letterLabel}>{grouped[letter].length} canciones</Text>
+                    {openLetters.has(letter) ? <ChevronDown size={18} color="#D4AF37" /> : <ChevronRight size={18} color="#666" />}
+                  </TouchableOpacity>
+                  {openLetters.has(letter) && grouped[letter].map((song, idx) => (
+                    <TouchableOpacity key={idx} style={[styles.songItem, canciones.includes(song) && styles.songItemSelected]} onPress={() => onToggle(song)}>
+                      <Text style={[styles.songItemText, canciones.includes(song) && styles.songItemTextSelected]}>{song}</Text>
                     </TouchableOpacity>
-                    {isOpen && songs.map((song, idx) => renderSongRow(song, idx))}
-                  </View>
-                );
-              })
+                  ))}
+                </View>
+              ))
             )}
             <View style={{ height: 40 }} />
           </ScrollView>
@@ -198,12 +137,16 @@ export default function AgendaScreen() {
   const [showSongPicker, setShowSongPicker] = useState(false);
   const [editingId, setEditingId] = useState(null);
 
+  // Pickers Native
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+
   // Form State
   const [nombreCliente, setNombreCliente] = useState('');
   const [telefono, setTelefono] = useState('');
   const [festejada, setFestejada] = useState('');
   const [motivo, setMotivo] = useState('');
-  const [fecha, setFecha] = useState('');
+  const [fecha, setFecha] = useState(''); // Se guarda como yyyy-mm-dd para Supabase
   const [hora, setHora] = useState('');
   const [direccion, setDireccion] = useState('');
   const [comuna, setComuna] = useState('');
@@ -211,26 +154,40 @@ export default function AgendaScreen() {
   const [tipo, setTipo] = useState('express');
   const [canciones, setCanciones] = useState([]);
 
+  // 📝 CORRECCIÓN: El precio cambia SIEMPRE que cambie el tipo, incluso editando
   useEffect(() => {
-    if (!editingId) {
-      if (tipo === 'express') setPrecio('25000');
-      else if (tipo === 'full') setPrecio('40000');
-    }
-  }, [tipo, editingId]);
+    if (tipo === 'express') setPrecio('25000');
+    else if (tipo === 'full') setPrecio('40000');
+  }, [tipo]);
 
   const fetchData = async () => {
     try {
       const { data } = await supabase.from('serenatas').select('*').order('fecha', { ascending: true });
       setSerenatas(data || []);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); setRefreshing(false); }
   };
 
   useEffect(() => { fetchData(); }, []);
+
+  const onDateChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(false);
+    if (selectedDate) {
+      const y = selectedDate.getFullYear();
+      const m = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const d = String(selectedDate.getDate()).padStart(2, '0');
+      setFecha(`${y}-${m}-${d}`);
+    }
+  };
+
+  const onTimeChange = (event: any, selectedTime?: Date) => {
+    setShowTimePicker(false);
+    if (selectedTime) {
+      const h = String(selectedTime.getHours()).padStart(2, '0');
+      const m = String(selectedTime.getMinutes()).padStart(2, '0');
+      setHora(`${h}:${m}`);
+    }
+  };
 
   const handleCreateOrUpdate = async () => {
     if (!nombreCliente || !festejada || !fecha || !precio) {
@@ -238,46 +195,23 @@ export default function AgendaScreen() {
       return;
     }
     try {
-      // Payload base sin estado (para no sobreescribir al editar)
       const payloadBase = {
-        nombre_cliente: nombreCliente,
-        telefono,
-        nombre_festejada: festejada,
-        motivo,
-        fecha,
-        hora,
-        direccion,
-        comuna,
-        precio_total: Number(precio),
-        tipo,
-        canciones,
+        nombre_cliente: nombreCliente, telefono, nombre_festejada: festejada,
+        motivo, fecha, hora, direccion, comuna,
+        precio_total: Number(precio), tipo, canciones,
       };
-      // Solo se añade estado al crear, no al editar
-      const payload = editingId
-        ? payloadBase
-        : { ...payloadBase, estado: 'pendiente' };
+      const payload = editingId ? payloadBase : { ...payloadBase, estado: 'pendiente' };
 
       if (editingId) {
         const { error } = await supabase.from('serenatas').update(payload).eq('id', editingId);
         if (error) throw error;
       } else {
-        const uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-          const r = Math.random() * 16 | 0;
-          const v = c === 'x' ? r : (r & 0x3 | 0x8);
-          return v.toString(16);
-        });
-        const { error } = await supabase.from('serenatas').insert([{ id: uuid, ...payload }]);
+        const { error } = await supabase.from('serenatas').insert([payload]);
         if (error) throw error;
       }
-
-      setShowModal(false);
-      setEditingId(null);
-      resetForm();
-      fetchData();
-      Alert.alert('¡Éxito!', editingId ? 'Serenata actualizada.' : 'Serenata agendada.');
-    } catch (e: any) {
-      Alert.alert('Error', e.message);
-    }
+      setShowModal(false); setEditingId(null); resetForm(); fetchData();
+      Alert.alert('¡Éxito!', editingId ? 'Actualizada.' : 'Agendada.');
+    } catch (e: any) { Alert.alert('Error', e.message); }
   };
 
   const handleEdit = (s: any) => {
@@ -302,14 +236,6 @@ export default function AgendaScreen() {
     setTipo('express'); setCanciones([]);
   };
 
-  const toggleSong = (song: string) => {
-    if (canciones.includes(song)) {
-      setCanciones(canciones.filter((c: string) => c !== song));
-    } else {
-      setCanciones([...canciones, song]);
-    }
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -317,136 +243,82 @@ export default function AgendaScreen() {
           <Text style={styles.headerTitle}>Agenda</Text>
           <Text style={styles.headerSubtitle}>El Mariachi Aventurero</Text>
         </View>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{serenatas.length}</Text>
-        </View>
+        <TouchableOpacity style={styles.refreshBtn} onPress={() => { setRefreshing(true); fetchData(); }}>
+           <Text style={styles.refreshText}>Actualizar</Text>
+        </TouchableOpacity>
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} tintColor="#D4AF37" />}
-      >
-        {loading && !refreshing ? (
-          <ActivityIndicator size="large" color="#D4AF37" style={{ marginTop: 50 }} />
-        ) : serenatas.length > 0 ? (
-          serenatas.map((s: any) => (
-            <SerenataCard key={s.id} serenata={s} onUpdate={fetchData} onEdit={() => handleEdit(s)} />
-          ))
-        ) : (
-          <View style={styles.empty}>
-            <Music size={60} color="rgba(255,255,255,0.1)" />
-            <Text style={styles.emptyText}>No hay eventos agendados.</Text>
-          </View>
-        )}
+      <ScrollView contentContainerStyle={styles.scrollContent} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} tintColor="#D4AF37" />}>
+        {loading && !refreshing ? <ActivityIndicator size="large" color="#D4AF37" style={{ marginTop: 50 }} /> :
+          serenatas.length > 0 ? serenatas.map((s: any) => <SerenataCard key={s.id} serenata={s} onUpdate={fetchData} onEdit={() => handleEdit(s)} />) :
+          <View style={styles.empty}><Music size={60} color="rgba(255,255,255,0.1)" /><Text style={styles.emptyText}>No hay eventos.</Text></View>
+        }
       </ScrollView>
 
       <TouchableOpacity style={styles.fab} onPress={() => setShowModal(true)}>
         <Plus color="#000" size={30} />
       </TouchableOpacity>
 
-      {/* ── Modal Principal Formulario ── */}
       <Modal visible={showModal} animationType="slide" transparent={true}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{editingId ? 'Editar Serenata' : 'Nueva Serenata'}</Text>
-              <TouchableOpacity onPress={() => { setShowModal(false); setEditingId(null); resetForm(); }}>
-                <X color="#FFF" size={24} />
-              </TouchableOpacity>
+              <TouchableOpacity onPress={() => { setShowModal(false); setEditingId(null); resetForm(); }}><X color="#FFF" size={24} /></TouchableOpacity>
             </View>
 
             <ScrollView style={styles.modalForm} showsVerticalScrollIndicator={false}>
-
-              {/* ── SECCIÓN: CLIENTE ── */}
               <View style={styles.sectionBlock}>
-                <Text style={styles.sectionLabel}>Cliente que contrata</Text>
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>Nombre</Text>
-                  <TextInput style={styles.input} placeholder="Ej. Juan Pérez" placeholderTextColor="#555" value={nombreCliente} onChangeText={setNombreCliente} />
-                </View>
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>Teléfono</Text>
-                  <TextInput style={styles.input} placeholder="Ej. 912345678" placeholderTextColor="#555" keyboardType="phone-pad" value={telefono} onChangeText={setTelefono} />
-                </View>
+                <Text style={styles.sectionLabel}>Cliente</Text>
+                <View style={styles.fieldGroup}><Text style={styles.fieldLabel}>Nombre</Text><TextInput style={styles.input} value={nombreCliente} onChangeText={setNombreCliente} /></View>
+                <View style={styles.fieldGroup}><Text style={styles.fieldLabel}>Teléfono</Text><TextInput style={styles.input} keyboardType="phone-pad" value={telefono} onChangeText={setTelefono} /></View>
               </View>
 
-              {/* ── SECCIÓN: EVENTO ── */}
               <View style={styles.sectionBlock}>
-                <Text style={styles.sectionLabel}>Detalles del Evento</Text>
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>¿A quién le cantamos?</Text>
-                  <TextInput style={styles.input} placeholder="Nombre de la festejada" placeholderTextColor="#555" value={festejada} onChangeText={setFestejada} />
-                </View>
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>Motivo</Text>
-                  <TextInput style={styles.input} placeholder="Ej. Cumpleaños, Aniversario" placeholderTextColor="#555" value={motivo} onChangeText={setMotivo} />
-                </View>
+                <Text style={styles.sectionLabel}>Lugar y Tiempo</Text>
+                <View style={styles.fieldGroup}><Text style={styles.fieldLabel}>Festejada(o)</Text><TextInput style={styles.input} value={festejada} onChangeText={setFestejada} /></View>
+                
+                {/* ── DATE & TIME PICKERS ── */}
                 <View style={styles.row}>
-                  <View style={[styles.fieldGroup, { flex: 1, marginRight: 10 }]}>
-                    <Text style={styles.fieldLabel}>Fecha</Text>
-                    <TextInput style={styles.input} placeholder="YYYY-MM-DD" placeholderTextColor="#555" value={fecha} onChangeText={setFecha} />
-                  </View>
-                  <View style={[styles.fieldGroup, { flex: 1 }]}>
+                  <TouchableOpacity style={[styles.fieldGroup, { flex: 1, marginRight: 10 }]} onPress={() => setShowDatePicker(true)}>
+                    <Text style={styles.fieldLabel}>Fecha (DD-MM-AAAA)</Text>
+                    <View style={styles.pickerTrigger}>
+                       <CalendarIcon size={16} color="#D4AF37" />
+                       <Text style={styles.pickerTriggerText}>{fecha ? formatToDMY(fecha) : '-- Seleccionar --'}</Text>
+                    </View>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.fieldGroup, { flex: 1 }]} onPress={() => setShowTimePicker(true)}>
                     <Text style={styles.fieldLabel}>Hora</Text>
-                    <TextInput style={styles.input} placeholder="HH:MM" placeholderTextColor="#555" value={hora} onChangeText={setHora} />
-                  </View>
+                    <View style={styles.pickerTrigger}>
+                       <Clock size={16} color="#D4AF37" />
+                       <Text style={styles.pickerTriggerText}>{hora || '--:--'}</Text>
+                    </View>
+                  </TouchableOpacity>
                 </View>
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>Dirección</Text>
-                  <TextInput style={styles.input} placeholder="Calle, número, departamento" placeholderTextColor="#555" value={direccion} onChangeText={setDireccion} />
-                </View>
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>Comuna / Ciudad</Text>
-                  <TextInput style={styles.input} placeholder="Ej. Santiago, Providencia" placeholderTextColor="#555" value={comuna} onChangeText={setComuna} />
-                </View>
-              </View>
 
-              {/* ── SECCIÓN: TIPO Y PRECIO ── */}
-              <View style={styles.sectionBlock}>
-                <Text style={styles.sectionLabel}>Tipo y Precio</Text>
-                <View style={[styles.row, { marginBottom: 0 }]}>
-                  <View style={styles.typeSwitcher}>
-                    <TouchableOpacity onPress={() => setTipo('express')} style={[styles.typeBtn, tipo === 'express' && styles.typeBtnActive]}>
-                      <Text style={[styles.typeText, tipo === 'express' && styles.typeTextActive]}>Express (2s)</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => setTipo('full')} style={[styles.typeBtn, tipo === 'full' && styles.typeBtnActive]}>
-                      <Text style={[styles.typeText, tipo === 'full' && styles.typeTextActive]}>Full (4s)</Text>
-                    </TouchableOpacity>
-                  </View>
-                  <View style={styles.priceContainer}>
-                    <DollarSign size={14} color="#D4AF37" />
-                    <TextInput style={styles.priceInput} keyboardType="numeric" value={precio} onChangeText={setPrecio} />
-                  </View>
-                </View>
-              </View>
-
-              {/* ── SECCIÓN: CANCIONES ── */}
-              <View style={styles.sectionBlock}>
-                <Text style={styles.sectionLabel}>Canciones ({canciones.length})</Text>
-                <TouchableOpacity style={styles.addSongsBtn} onPress={() => setShowSongPicker(true)}>
-                  <ListMusic size={20} color="#D4AF37" />
-                  <Text style={styles.addSongsText}>
-                    {canciones.length === 0
-                      ? 'Elegir canciones del repertorio'
-                      : `${canciones.length} canción${canciones.length !== 1 ? 'es' : ''} seleccionada${canciones.length !== 1 ? 's' : ''} — cambiar`}
-                  </Text>
-                </TouchableOpacity>
-                {canciones.length > 0 && (
-                  <View style={styles.selectedSongsPreview}>
-                    {[...canciones].sort().map((song: string, idx: number) => (
-                      <View key={idx} style={styles.songTag}>
-                        <Text style={styles.songTagText}>{song}</Text>
-                        <TouchableOpacity onPress={() => setCanciones(canciones.filter((c: string) => c !== song))}>
-                          <X size={11} color="#D4AF37" />
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
+                {showDatePicker && (
+                  <DateTimePicker value={fecha ? new Date(fecha + 'T12:00:00') : new Date()} mode="date" display="default" onChange={onDateChange} />
                 )}
+                {showTimePicker && (
+                  <DateTimePicker value={new Date()} mode="time" is24Hour={true} display="default" onChange={onTimeChange} />
+                )}
+
+                <View style={styles.fieldGroup}><Text style={styles.fieldLabel}>Dirección</Text><TextInput style={styles.input} value={direccion} onChangeText={setDireccion} /></View>
+                <View style={styles.fieldGroup}><Text style={styles.fieldLabel}>Comuna</Text><TextInput style={styles.input} value={comuna} onChangeText={setComuna} /></View>
+              </View>
+
+              <View style={styles.sectionBlock}>
+                <View style={styles.row}>
+                  <View style={styles.typeSwitcher}>
+                    <TouchableOpacity onPress={() => setTipo('express')} style={[styles.typeBtn, tipo === 'express' && styles.typeBtnActive]}><Text style={[styles.typeText, tipo === 'express' && styles.typeTextActive]}>Express (2s)</Text></TouchableOpacity>
+                    <TouchableOpacity onPress={() => setTipo('full')} style={[styles.typeBtn, tipo === 'full' && styles.typeBtnActive]}><Text style={[styles.typeText, tipo === 'full' && styles.typeTextActive]}>Full (4s)</Text></TouchableOpacity>
+                  </View>
+                  <View style={styles.priceContainer}><DollarSign size={14} color="#D4AF37" /><TextInput style={styles.priceInput} keyboardType="numeric" value={precio} onChangeText={setPrecio} /></View>
+                </View>
               </View>
 
               <TouchableOpacity style={styles.submitBtn} onPress={handleCreateOrUpdate}>
-                <Text style={styles.submitText}>{editingId ? 'GUARDAR CAMBIOS' : 'CONFIRMAR AGENDA'}</Text>
+                <Text style={styles.submitText}>{editingId ? 'ACTUALIZAR' : 'AGENDAR'}</Text>
               </TouchableOpacity>
               <View style={{ height: 40 }} />
             </ScrollView>
@@ -454,13 +326,7 @@ export default function AgendaScreen() {
         </View>
       </Modal>
 
-      {/* ── Modal Selector de Canciones ── */}
-      <SongPickerModal
-        visible={showSongPicker}
-        canciones={canciones}
-        onClose={() => setShowSongPicker(false)}
-        onToggle={toggleSong}
-      />
+      <SongPickerModal visible={showSongPicker} canciones={canciones} onClose={() => setShowSongPicker(false)} onToggle={(song: string) => canciones.includes(song) ? setCanciones(canciones.filter(c => c !== song)) : setCanciones([...canciones, song])} />
     </SafeAreaView>
   );
 }
@@ -468,104 +334,54 @@ export default function AgendaScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
   header: { padding: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#222' },
-  headerTitle: { color: '#FFF', fontSize: 26, fontWeight: 'bold' },
-  headerSubtitle: { color: '#D4AF37', fontSize: 10, textTransform: 'uppercase', letterSpacing: 2.5 },
-  badge: { backgroundColor: 'rgba(212,175,55,0.12)', paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(212,175,55,0.25)' },
-  badgeText: { color: '#D4AF37', fontWeight: 'bold', fontSize: 15 },
+  headerTitle: { color: '#FFF', fontSize: 24, fontWeight: 'bold' },
+  headerSubtitle: { color: '#D4AF37', fontSize: 9, textTransform: 'uppercase', letterSpacing: 2 },
+  refreshBtn: { backgroundColor: '#111', padding: 8, borderRadius: 10, borderWidth: 1, borderColor: '#333' },
+  refreshText: { color: '#D4AF37', fontSize: 11, fontWeight: 'bold' },
   scrollContent: { padding: 18, paddingBottom: 110 },
   empty: { alignItems: 'center', marginTop: 100 },
-  emptyText: { color: 'rgba(255,255,255,0.25)', marginTop: 12, fontSize: 14 },
-  fab: { position: 'absolute', bottom: 30, right: 25, backgroundColor: '#D4AF37', width: 62, height: 62, borderRadius: 31, justifyContent: 'center', alignItems: 'center', elevation: 8, shadowColor: '#D4AF37', shadowRadius: 12, shadowOpacity: 0.4, shadowOffset: { width: 0, height: 4 } },
-
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: '#111', borderTopLeftRadius: 30, borderTopRightRadius: 30, height: '92%', padding: 22 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 },
-  modalTitle: { color: '#D4AF37', fontSize: 22, fontWeight: 'bold', letterSpacing: 0.5 },
+  emptyText: { color: '#444', marginTop: 12 },
+  fab: { position: 'absolute', bottom: 30, right: 25, backgroundColor: '#D4AF37', width: 60, height: 60, borderRadius: 30, justifyContent: 'center', alignItems: 'center', elevation: 5 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: '#0A0A0A', borderTopLeftRadius: 30, borderTopRightRadius: 30, height: '90%', padding: 20 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  modalTitle: { color: '#D4AF37', fontSize: 20, fontWeight: 'bold' },
   modalForm: { flex: 1 },
-
-  // Bloques de sección del formulario
-  sectionBlock: {
-    backgroundColor: '#161616',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#252525',
-    padding: 16,
-    marginBottom: 16,
-  },
-  sectionLabel: {
-    color: '#D4AF37',
-    fontSize: 10,
-    textTransform: 'uppercase',
-    letterSpacing: 1.5,
-    fontWeight: 'bold',
-    marginBottom: 14,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(212,175,55,0.15)',
-  },
-  // Cada campo individual: label arriba, input abajo
-  fieldGroup: {
-    marginBottom: 12,
-  },
-  fieldLabel: {
-    color: 'rgba(255,255,255,0.45)',
-    fontSize: 11,
-    marginBottom: 6,
-    fontWeight: '500',
-    letterSpacing: 0.3,
-  },
-
-  input: { backgroundColor: '#1C1C1C', borderRadius: 12, padding: 15, color: '#FFF', marginBottom: 0, borderWidth: 1, borderColor: '#2A2A2A', fontSize: 15 },
+  sectionBlock: { backgroundColor: '#111', borderRadius: 15, padding: 15, marginBottom: 15, borderWidth: 1, borderColor: '#222' },
+  sectionLabel: { color: '#666', fontSize: 10, fontWeight: 'bold', marginBottom: 15, textTransform: 'uppercase' },
+  fieldGroup: { marginBottom: 15 },
+  fieldLabel: { color: '#D4AF37', fontSize: 11, marginBottom: 8, fontWeight: 'bold' },
+  input: { backgroundColor: '#000', borderRadius: 10, padding: 12, color: '#FFF', borderWidth: 1, borderColor: '#333', fontSize: 15 },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  typeSwitcher: { flex: 1, flexDirection: 'row', backgroundColor: '#1C1C1C', borderRadius: 12, height: 55, padding: 5, marginRight: 10 },
-  typeBtn: { flex: 1, justifyContent: 'center', alignItems: 'center', borderRadius: 8 },
+  pickerTrigger: { backgroundColor: '#000', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#333', flexDirection: 'row', alignItems: 'center', gap: 10 },
+  pickerTriggerText: { color: '#FFF', fontSize: 14 },
+  typeSwitcher: { flex: 1, flexDirection: 'row', backgroundColor: '#000', borderRadius: 10, padding: 4, marginRight: 10, borderWeight: 1, borderColor: '#222' },
+  typeBtn: { flex: 1, height: 40, justifyContent: 'center', alignItems: 'center', borderRadius: 8 },
   typeBtnActive: { backgroundColor: '#D4AF37' },
-  typeText: { color: '#666', fontSize: 12, fontWeight: 'bold' },
+  typeText: { color: '#444', fontSize: 11, fontWeight: 'bold' },
   typeTextActive: { color: '#000' },
-  priceContainer: { flex: 0.6, backgroundColor: '#1C1C1C', borderRadius: 12, height: 55, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, borderWidth: 1.5, borderColor: '#D4AF37' },
-  priceInput: { flex: 1, color: '#FFF', fontSize: 16, fontWeight: 'bold', marginLeft: 5 },
-
-  addSongsBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(212,175,55,0.08)', padding: 16, borderRadius: 12, borderStyle: 'dashed', borderWidth: 1.5, borderColor: 'rgba(212,175,55,0.4)', marginBottom: 14 },
-  addSongsText: { color: '#D4AF37', fontWeight: '600', fontSize: 13, flex: 1 },
-  selectedSongsPreview: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 22 },
-  songTag: { backgroundColor: '#222', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 7, borderWidth: 1, borderColor: '#333' },
-  songTagText: { color: '#DDD', fontSize: 11, fontWeight: '500' },
-
-  submitBtn: { backgroundColor: '#D4AF37', padding: 18, borderRadius: 14, alignItems: 'center', marginTop: 10, shadowColor: '#D4AF37', shadowRadius: 12, shadowOpacity: 0.35, elevation: 6 },
-  submitText: { color: '#000', fontWeight: 'bold', fontSize: 15, letterSpacing: 1.5 },
-
-  // SongPickerModal
-  pickerOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.88)', justifyContent: 'flex-end' },
-  pickerSheet: { backgroundColor: '#111', borderTopLeftRadius: 28, borderTopRightRadius: 28, height: '85%', paddingTop: 12 },
-  pickerHandle: { width: 40, height: 4, backgroundColor: '#333', borderRadius: 2, alignSelf: 'center', marginBottom: 12 },
-  pickerHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#1E1E1E' },
-  pickerTitle: { color: '#D4AF37', fontSize: 20, fontWeight: 'bold' },
-  pickerSubtitle: { color: '#888', fontSize: 12, marginTop: 3 },
-  pickerDoneBtn: { backgroundColor: '#D4AF37', paddingHorizontal: 18, paddingVertical: 9, borderRadius: 10 },
-  pickerDoneText: { color: '#000', fontWeight: 'bold', fontSize: 14 },
-
-  searchContainer: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#1A1A1A', margin: 14, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#2A2A2A' },
-  searchInput: { flex: 1, color: '#FFF', fontSize: 15 },
-
+  priceContainer: { flex: 0.8, backgroundColor: '#000', borderRadius: 10, height: 48, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, borderWidth: 1, borderColor: '#D4AF37' },
+  priceInput: { flex: 1, color: '#D4AF37', fontSize: 16, fontWeight: 'bold', marginLeft: 8 },
+  submitBtn: { backgroundColor: '#D4AF37', padding: 18, borderRadius: 15, alignItems: 'center', marginTop: 10 },
+  submitText: { color: '#000', fontWeight: 'bold', fontSize: 16 },
+  pickerOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
+  pickerSheet: { backgroundColor: '#111', borderTopLeftRadius: 30, borderTopRightRadius: 30, height: '80%' },
+  pickerHandle: { width: 40, height: 4, backgroundColor: '#333', borderRadius: 2, alignSelf: 'center', margin: 10 },
+  pickerHeader: { padding: 20, flexDirection: 'row', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: '#222' },
+  pickerTitle: { color: '#D4AF37', fontSize: 18, fontWeight: 'bold' },
+  pickerSubtitle: { color: '#666', fontSize: 12 },
+  pickerDoneBtn: { backgroundColor: '#D4AF37', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 8 },
+  pickerDoneText: { color: '#000', fontWeight: 'bold' },
+  searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#000', margin: 15, padding: 10, borderRadius: 10, gap: 10 },
+  searchInput: { color: '#FFF', flex: 1 },
   pickerScroll: { flex: 1 },
-
-  // Acordeón
-  letterGroup: { borderBottomWidth: 1, borderBottomColor: '#1A1A1A' },
-  letterHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: 14, gap: 10 },
-  letterBadge: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#D4AF37', justifyContent: 'center', alignItems: 'center' },
-  letterBadgeText: { color: '#000', fontWeight: 'bold', fontSize: 15 },
-  letterLabel: { color: '#888', fontSize: 13 },
-  selectedBadge: { backgroundColor: 'rgba(212,175,55,0.15)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(212,175,55,0.3)' },
-  selectedBadgeText: { color: '#D4AF37', fontSize: 11, fontWeight: 'bold' },
-
-  // Filas de canción
-  songItem: { paddingVertical: 14, paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: '#1A1A1A', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  songItemSelected: { backgroundColor: '#D4AF37' },
-  songItemText: { color: '#DDD', fontSize: 14 },
-  songItemTextSelected: { color: '#000', fontWeight: 'bold' },
-  songCheck: { width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(0,0,0,0.2)', justifyContent: 'center', alignItems: 'center' },
-
-  // No resultados
-  noResults: { alignItems: 'center', marginTop: 50, gap: 12 },
-  noResultsText: { color: 'rgba(255,255,255,0.3)', fontSize: 14 },
+  letterGroup: { marginBottom: 5 },
+  letterHeader: { padding: 15, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  letterBadge: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#D4AF37', justifyContent: 'center', alignItems: 'center' },
+  letterBadgeText: { fontWeight: 'bold' },
+  letterLabel: { color: '#888', flex: 1 },
+  songItem: { padding: 15, borderBottomWidth: 1, borderBottomColor: '#222' },
+  songItemSelected: { backgroundColor: '#D4AF3722' },
+  songItemText: { color: '#FFF' },
+  songItemTextSelected: { color: '#D4AF37', fontWeight: 'bold' }
 });
