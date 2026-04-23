@@ -36,6 +36,10 @@ html, body {
 body {
   color: #fff;
   background-color: var(--bg-dark);
+  background-image: url('/fondo_app.jpg');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
   font-family: var(--font-outfit);
   line-height: 1.5;
 }

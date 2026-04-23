@@ -7,9 +7,9 @@ import {
   TouchableOpacity, 
   KeyboardAvoidingView, 
   Platform,
-  Image,
   ActivityIndicator,
-  Alert
+  Alert,
+  ImageBackground
 } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { Music, Lock, Mail } from 'lucide-react-native';
@@ -34,66 +34,82 @@ export default function LoginScreen({ onLogin }: any) {
   };
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
+    <ImageBackground 
+      source={require('../../assets/fondo_login.jpg')} 
+      style={styles.backgroundImage}
+      resizeMode="cover"
     >
-      <View style={styles.inner}>
-        <View style={styles.logoContainer}>
-          <View style={styles.iconCircle}>
-            <Music color="#D4AF37" size={50} />
-          </View>
-          <Text style={styles.title}>EL MARIACHI</Text>
-          <Text style={styles.subtitle}>AVENTURERO</Text>
-        </View>
+      <View style={styles.overlay}>
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.container}
+        >
+          <View style={styles.inner}>
+            <View style={styles.logoContainer}>
+              <View style={styles.iconCircle}>
+                <Music color="#D4AF37" size={50} />
+              </View>
+              <Text style={styles.title}>EL MARIACHI</Text>
+              <Text style={styles.subtitle}>AVENTURERO</Text>
+            </View>
 
-        <View style={styles.form}>
-          <View style={styles.inputGroup}>
-            <Mail color="#D4AF37" size={20} style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Correo Electrónico"
-              placeholderTextColor="rgba(255,255,255,0.3)"
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-            />
-          </View>
+            <View style={styles.form}>
+              <View style={styles.inputGroup}>
+                <Mail color="#D4AF37" size={20} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Correo Electrónico"
+                  placeholderTextColor="rgba(255,255,255,0.4)"
+                  value={email}
+                  onChangeText={setEmail}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                />
+              </View>
 
-          <View style={styles.inputGroup}>
-            <Lock color="#D4AF37" size={20} style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Contraseña"
-              placeholderTextColor="rgba(255,255,255,0.3)"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-            />
-          </View>
+              <View style={styles.inputGroup}>
+                <Lock color="#D4AF37" size={20} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Contraseña"
+                  placeholderTextColor="rgba(255,255,255,0.4)"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                />
+              </View>
 
-          <TouchableOpacity 
-            style={styles.button} 
-            onPress={handleLogin}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#000" />
-            ) : (
-              <Text style={styles.buttonText}>INGRESAR AL SISTEMA</Text>
-            )}
-          </TouchableOpacity>
-        </View>
+              <TouchableOpacity 
+                style={styles.button} 
+                onPress={handleLogin}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#000" />
+                ) : (
+                  <Text style={styles.buttonText}>INGRESAR AL SISTEMA</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
       </View>
-    </KeyboardAvoidingView>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
+  backgroundImage: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.65)', // Oscurecemos la imagen para legibilidad
+  },
   container: {
     flex: 1,
-    backgroundColor: '#000',
   },
   inner: {
     flex: 1,
@@ -108,12 +124,15 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: 'rgba(212, 175, 55, 0.1)',
+    backgroundColor: 'rgba(212, 175, 55, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(212, 175, 55, 0.3)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(212, 175, 55, 0.4)',
     marginBottom: 20,
+    shadowColor: '#D4AF37',
+    shadowRadius: 20,
+    shadowOpacity: 0.2,
   },
   title: {
     color: '#D4AF37',
@@ -126,7 +145,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     letterSpacing: 10,
     marginTop: -5,
-    opacity: 0.8,
+    opacity: 0.9,
+    fontWeight: 'bold',
   },
   form: {
     gap: 15,
@@ -134,39 +154,38 @@ const styles = StyleSheet.create({
   inputGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1A1A1A',
-    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    paddingHorizontal: 15,
+    borderColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 18,
   },
   inputIcon: {
-    marginRight: 10,
-    opacity: 0.6,
+    marginRight: 12,
   },
   input: {
     flex: 1,
-    height: 55,
+    height: 60,
     color: '#FFF',
     fontSize: 16,
   },
   button: {
     backgroundColor: '#D4AF37',
-    height: 55,
-    borderRadius: 12,
+    height: 60,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 10,
     shadowColor: '#D4AF37',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
   },
   buttonText: {
     color: '#000',
     fontSize: 16,
     fontWeight: 'bold',
-    letterSpacing: 1,
+    letterSpacing: 1.5,
   }
 });

@@ -35,8 +35,20 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black px-4 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-yellow-900/20 via-black to-black">
-      <div className="max-w-md w-full space-y-8 glass-card border border-white/10 p-8">
+    <div className="min-h-screen flex items-center justify-center relative bg-black px-4">
+      {/* Fondo con imagen personalizada */}
+      <div 
+        style={{ 
+          backgroundImage: "url('/fondo_login.jpg')", 
+          backgroundSize: 'cover', 
+          backgroundPosition: 'center',
+          position: 'absolute',
+          top: 0, left: 0, right: 0, bottom: 0,
+          opacity: 0.4 // Ajustamos opacidad para profesionalismo
+        }} 
+      />
+      
+      <div className="max-w-md w-full space-y-8 glass-card border border-white/10 p-8 relative z-10">
         <div className="text-center">
           <h1 className="text-4xl font-bold bg-gradient-to-b from-[var(--accent-gold)] to-yellow-600 bg-clip-text text-transparent tracking-widest uppercase mb-2">
             El Mariachi
