@@ -3,12 +3,11 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
-import { Calendar, Users, BarChart3, LogOut } from 'lucide-react-native';
-import { TouchableOpacity } from 'react-native';
+import { Calendar as CalendarIcon, Users, BarChart3, List } from 'lucide-react-native';
 
 // Screens
 import AgendaScreen from './src/screens/AgendaScreen';
-import ClientesScreen from './src/screens/ClientesScreen';
+import CalendarioScreen from './src/screens/CalendarioScreen'; // La nueva pantalla
 import ReportesScreen from './src/screens/ReportesScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import { supabase } from './src/lib/supabase';
@@ -21,26 +20,27 @@ function MainTabs() {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         tabBarIcon: ({ color, size }) => {
-          if (route.name === 'Agenda') return <Calendar color={color} size={size} />;
-          if (route.name === 'Clientes') return <Users color={color} size={size} />;
+          if (route.name === 'Agenda') return <List color={color} size={size} />;
+          if (route.name === 'Calendario') return <CalendarIcon color={color} size={size} />;
           if (route.name === 'Reportes') return <BarChart3 color={color} size={size} />;
         },
         tabBarActiveTintColor: '#D4AF37',
         tabBarInactiveTintColor: 'gray',
         tabBarStyle: {
-          backgroundColor: '#111',
-          borderTopColor: '#333',
-          paddingBottom: 5,
+          backgroundColor: '#0A0A0A',
+          borderTopColor: '#222',
+          height: 60,
+          paddingBottom: 10,
         },
         headerStyle: {
-          backgroundColor: '#111',
-          borderBottomColor: '#333',
+          backgroundColor: '#0A0A0A',
+          borderBottomColor: '#222',
         },
         headerTintColor: '#D4AF37',
       })}
     >
       <Tab.Screen name="Agenda" component={AgendaScreen} />
-      <Tab.Screen name="Clientes" component={ClientesScreen} />
+      <Tab.Screen name="Calendario" component={CalendarioScreen} options={{ title: 'Calendario de Serenatas' }} />
       <Tab.Screen name="Reportes" component={ReportesScreen} />
     </Tab.Navigator>
   );
