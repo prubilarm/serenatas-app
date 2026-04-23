@@ -29,21 +29,15 @@ const Sidebar = () => {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [user, setUser] = useState<any>(null);
-  const [isDesktop, setIsDesktop] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user);
-    });
-
-    const checkSize = () => setIsDesktop(window.innerWidth >= 1200);
-    checkSize();
-    window.addEventListener('resize', checkSize);
-    return () => window.removeEventListener('resize', checkSize);
+    setMounted(true);
   }, []);
 
   if (pathname === '/login') return null;
+  // Si no está montado (SSR), no renderizamos partes que dependan del cliente para evitar error 500
+  if (!mounted) return null;
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -79,8 +73,8 @@ const Sidebar = () => {
 
   return (
     <>
-      {/* SIDEBAR DESKTOP (SSR Safe) */}
-      <div className="sidebar-desktop">
+      {/* SIDEBAR DESKTOP */}
+      <div className="sidebar-desktop hidden xl:flex">
         <div className="p-8 pb-4">
           <h1 className="hero-title text-lg font-bold gold-gradient-text">EL MARIACHI</h1>
           <p className="text-[10px] text-white/20 uppercase tracking-[0.4em]">Aventurero</p>
@@ -93,8 +87,8 @@ const Sidebar = () => {
         </div>
       </div>
 
-      {/* HEADER MÓVIL (Solo si NO es desktop) */}
-      <div className="mobile-header">
+      {/* HEADER MÓVIL */}
+      <div className="mobile-header xl:hidden">
         <h1 className="hero-title text-sm font-bold gold-gradient-text tracking-widest">MARIACHI AVENTURERO</h1>
         <button onClick={() => setMobileOpen(true)} className="p-2 text-white/60">
           <Menu size={24} />
@@ -102,22 +96,25 @@ const Sidebar = () => {
       </div>
 
       {/* DRAWER MÓVIL */}
-      <div className={`mobile-drawer-overlay ${mobileOpen ? 'visible' : ''}`} onClick={() => setMobileOpen(false)} />
-      <div className={`mobile-drawer ${mobileOpen ? 'open' : ''}`}>
-        <div className="flex items-center justify-between p-6 border-b border-white/10">
-          <h1 className="hero-title text-base font-bold gold-gradient-text">MENÚ</h1>
-          <button onClick={() => setMobileOpen(false)} className="text-white/20"><X size={24} /></button>
+      {mobileOpen && (
+        <div className="fixed inset-0 bg-black/80 z-[100] animate-in fade-in transition-all" onClick={() => setMobileOpen(false)}>
+          <div className="w-[280px] h-full bg-[#0a0a0a] border-r border-white/10" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-6 border-b border-white/10">
+              <h1 className="hero-title text-base font-bold gold-gradient-text">MENÚ</h1>
+              <button onClick={() => setMobileOpen(false)} className="text-white/20"><X size={24} /></button>
+            </div>
+            <NavLinks onClose={() => setMobileOpen(false)} />
+            <div className="p-6 border-t border-white/10">
+              <button onClick={handleLogout} className="text-rose-500 font-bold uppercase text-xs flex items-center gap-2">
+                <LogOut size={16} /> Cerrar Sesión
+              </button>
+            </div>
+          </div>
         </div>
-        <NavLinks onClose={() => setMobileOpen(false)} />
-        <div className="p-6 border-t border-white/10">
-          <button onClick={handleLogout} className="text-rose-500 font-bold uppercase text-xs flex items-center gap-2">
-            <LogOut size={16} /> Cerrar Sesión
-          </button>
-        </div>
-      </div>
+      )}
 
       {/* BOTTOM NAV MÓVIL */}
-      <nav className="bottom-nav">
+      <nav className="bottom-nav xl:hidden">
         {menuItems.slice(0, 5).map((item) => {
           const isActive = pathname === item.href;
           return (
