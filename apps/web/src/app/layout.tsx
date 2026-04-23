@@ -6,34 +6,24 @@ import Sidebar from "@/components/Sidebar";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "SISTEMA AVENTURERO v4.0 | El Mariachi",
-  description: "Gestión Profesional de Serenatas",
+  title: "SISTEMA AVENTURERO v4.0",
+  description: "Mariachi Aventurero",
 };
 
-// ── En Next.js 13+ App Router, el viewport se exporta así ──
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
   themeColor: "#050505",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="es">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Marcellus&family=Outfit:wght@300;400;500;600;700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
-      <body className={inter.className}>
+      <body className={inter.className} style={{ background: '#000' }}>
         <div className="app-layout">
           <Sidebar />
           <main className="app-main">
