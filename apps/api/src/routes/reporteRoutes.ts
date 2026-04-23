@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { generateReportePDF, generateSerenataPDF } from '../controllers/reporteController';
+import { generateReportePDF, generateSerenataPDF, generatePagoPDF } from '../controllers/reporteController';
 
 const router = Router();
 
@@ -9,14 +9,6 @@ const router = Router();
  *   get:
  *     summary: Genera un reporte PDF de las actividades
  *     tags: [Reportes]
- *     responses:
- *       200:
- *         description: Archivo PDF generado
- *         content:
- *           application/pdf:
- *             schema:
- *               type: string
- *               format: binary
  */
 router.get('/pdf', generateReportePDF);
 
@@ -24,18 +16,16 @@ router.get('/pdf', generateReportePDF);
  * @swagger
  * /api/reportes/serenata/{id}:
  *   get:
- *     summary: Genera un comprobante PDF para un cliente
- *     tags: [Reportes]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Comprobante PDF generado
+ *     summary: Genera un comprobante de reserva
  */
 router.get('/serenata/:id', generateSerenataPDF);
+
+/**
+ * @swagger
+ * /api/reportes/pago/{id}:
+ *   get:
+ *     summary: Genera un comprobante de pago
+ */
+router.get('/pago/:id', generatePagoPDF);
 
 export default router;
