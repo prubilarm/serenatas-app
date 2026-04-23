@@ -1,8 +1,9 @@
 import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Linking, Alert, Platform } from 'react-native';
 import { 
-  Phone, MessageCircle, FileText, MapPin, 
-  Trash2, Edit3, Clock, DollarSign, Calendar, Check, RotateCcw
+  MessageCircle, MapPin, Trash2, Edit3, 
+  Clock, DollarSign, Calendar, Check, RotateCcw,
+  FileText, Music
 } from 'lucide-react-native';
 import { supabase } from '../lib/supabase';
 
@@ -17,10 +18,9 @@ export default function SerenataCard({ serenata, onUpdate, onEdit }: any) {
       await supabase.from('serenatas').update({ estado: nextStatus }).eq('id', s.id);
       
       if (isFinishing) {
-        // FLUJO DE FINALIZACIÓN AUTOMÁTICA
         Alert.alert(
           'Servicio Finalizado',
-          '¿Deseas enviar el comprobante de pago por WhatsApp ahora?',
+          '¿Deseas enviar el comprobante de pago escrito por WhatsApp?',
           [
             { text: 'No', onPress: () => onUpdate && onUpdate() },
             { text: 'SÍ, ENVIAR', onPress: () => {
@@ -42,15 +42,51 @@ export default function SerenataCard({ serenata, onUpdate, onEdit }: any) {
     if (url) Linking.openURL(url);
   };
 
+  // NUEVO: Comprobante de Pago por TEXTO (Sin PDF)
   const handleWhatsAppPago = () => {
-    const pdfUrl = `https://api-alpha-five-25.vercel.app/api/reportes/pago/${s.id}`;
-    const msg = `🎺 *EL MARIACHI AVENTURERO*%0A━━━━━━━━━━━━━━━━━━━%0A✅ *PAGO RECIBIDO EXITOSAMENTE*%0A%0AHola *${s.nombre_cliente}*, muchas gracias por preferir nuestros servicios para la serenata de *${s.nombre_festejada}*.%0A%0A¡Fue un gusto acompañarles! Adjunto su comprobante de pago oficial:%0A%0A🔗 *VER COMPROBANTE:* ${pdfUrl}%0A%0A¡Esperamos verles pronto! 🌹`;
+    const cancionesTxt = s.canciones?.length > 0 ? s.canciones.join(', ') : 'No especificadas';
+    const msg = `🎺 EL MARIACHI AVENTURERO
+━━━━━━━━━━━━━━━━━━━
+✅ COMPROBANTE DE PAGO
+
+Hola ${s.nombre_cliente}, confirmamos la recepción del pago por la serenata realizada hoy.
+
+DETALLES DEL SERVICIO:
+• Festejada: ${s.nombre_festejada}
+• Motivo: ${s.motivo || 'Serenata'}
+• Fecha: ${s.fecha.split('-').reverse().join('-')}
+• Ubicación: ${s.direccion}, ${s.comuna}
+• Canciones: ${cancionesTxt}
+
+MONTO TOTAL: $${s.precio_total?.toLocaleString()}
+ESTADO: Pagado (Efectivo/Transferencia)
+
+Muchas gracias por preferir nuestros servicios. ¡Hicimos de este momento algo inolvidable! 🌹`;
+    
     sendWhatsApp(msg);
   };
 
+  // NUEVO: Comprobante de Reserva por TEXTO (Sin PDF)
   const handleWhatsAppReserva = () => {
-    const pdfUrl = `https://api-alpha-five-25.vercel.app/api/reportes/serenata/${s.id}`;
-    const msg = `🎺 *EL MARIACHI AVENTURERO*%0A━━━━━━━━━━━━━━━━━━━%0A✅ *RESERVA CONFIRMADA*%0A%0AHola *${s.nombre_cliente}*, adjunto link oficial de la reserva para *${s.nombre_festejada}*:%0A%0A🔗 *VER RESERVA:* ${pdfUrl}%0A%0A📅 *Fecha:* ${s.fecha.split('-').reverse().join('-')}%0A⏰ *Hora:* ${s.hora}%0A%0A¡Haremos de este momento algo inolvidable! 🎸`;
+    const cancionesTxt = s.canciones?.length > 0 ? s.canciones.join(', ') : 'A elección del cliente';
+    const msg = `🎺 EL MARIACHI AVENTURERO
+━━━━━━━━━━━━━━━━━━━
+✅ CONFIRMACIÓN DE RESERVA
+
+Hola ${s.nombre_cliente}, tu reserva ha sido agendada con éxito.
+
+DETALLES DE LA CITA:
+• Para: ${s.nombre_festejada}
+• Motivo: ${s.motivo || 'Evento Especial'}
+• Fecha: ${s.fecha.split('-').reverse().join('-')}
+• Hora: ${s.hora}
+• Dirección: ${s.direccion}, ${s.comuna}
+• Repertorio: ${cancionesTxt}
+
+VALOR DEL SERVICIO: $${s.precio_total?.toLocaleString()}
+
+¡Muchas gracias por su confianza! Será un gusto acompañarles con nuestra música. 🎸🌹`;
+    
     sendWhatsApp(msg);
   };
 
@@ -58,7 +94,9 @@ export default function SerenataCard({ serenata, onUpdate, onEdit }: any) {
     let phone = s.telefono || '';
     phone = phone.replace(/\D/g, '');
     if (!phone.startsWith('56')) phone = '56' + phone;
-    Linking.openURL(`whatsapp://send?phone=${phone}&text=${text}`);
+    // Usar encodeURIComponent para que los saltos de línea se mantengan
+    const url = `whatsapp://send?phone=${phone}&text=${encodeURIComponent(text)}`;
+    Linking.openURL(url);
   };
 
   return (
@@ -79,6 +117,12 @@ export default function SerenataCard({ serenata, onUpdate, onEdit }: any) {
           <View style={styles.infoRow}><Clock size={14} color="#D4AF37" /><Text style={styles.infoText}>{s.hora}</Text></View>
         </View>
         <Text style={styles.festejadaName}>{s.nombre_festejada}</Text>
+        {s.canciones?.length > 0 && (
+          <View style={[styles.infoRow, { marginTop: 5 }]}>
+            <Music size={12} color="#666" />
+            <Text style={styles.cancionesMini} numberOfLines={1}>{s.canciones.length} canciones elegidas</Text>
+          </View>
+        )}
       </View>
 
       <TouchableOpacity style={styles.addressBox} onPress={openMap}>
@@ -104,8 +148,8 @@ export default function SerenataCard({ serenata, onUpdate, onEdit }: any) {
              <FileText size={18} color="#D4AF37" />
           </TouchableOpacity>
           <TouchableOpacity style={[styles.btnAction, {backgroundColor: s.estado === 'completada' ? '#2ecc71' : '#D4AF37'}]} onPress={handleStatusToggle}>
-             {s.estado === 'completada' ? <MessageCircle size={20} color="#000" /> : <Check size={20} color="#000" />}
-             <Text style={styles.btnLabel}>{s.estado === 'completada' ? 'RECIBO' : 'FINALIZAR'}</Text>
+             {s.estado === 'completada' ? <Check size={20} color="#000" /> : <Check size={20} color="#000" />}
+             <Text style={styles.btnLabel}>{s.estado === 'completada' ? 'FINALIZADA' : 'FINALIZAR'}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -128,6 +172,7 @@ const styles = StyleSheet.create({
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   infoText: { color: '#888', fontSize: 12 },
   festejadaName: { color: '#FFF', fontSize: 20, fontWeight: 'bold' },
+  cancionesMini: { color: '#555', fontSize: 11, marginLeft: 5 },
   addressBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#111', padding: 15, borderRadius: 15, marginBottom: 15 },
   addressText: { color: '#FFF', fontSize: 14, fontWeight: 'bold' },
   comunaText: { color: '#D4AF37', fontSize: 10, fontWeight: 'bold' },

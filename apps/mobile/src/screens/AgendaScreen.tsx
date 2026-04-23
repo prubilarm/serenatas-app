@@ -197,39 +197,56 @@ export default function AgendaScreen() {
                 <View style={[styles.modalContent, { backgroundColor: 'transparent' }]}>
                     <View style={styles.modalHeader}><Text style={styles.modalTitle}>{editingId ? 'EDITAR' : 'NUEVA'} SERENATA</Text><TouchableOpacity onPress={() => setShowModal(false)}><X color="#D4AF37" size={28} /></TouchableOpacity></View>
                     <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-                        <Text style={styles.sectionTitle}>Identidad</Text>
-                        <TextInput style={styles.input} placeholder="Cliente" placeholderTextColor="#555" value={nombreCliente} onChangeText={setNombreCliente} />
-                        <TextInput style={styles.input} placeholder="Festejada" placeholderTextColor="#555" value={festejada} onChangeText={setFestejada} />
+                        <Text style={styles.sectionTitle}>Identidad & Contacto</Text>
+                        <TextInput style={styles.input} placeholder="Nombre del Cliente" placeholderTextColor="#555" value={nombreCliente} onChangeText={setNombreCliente} selectionColor="#D4AF37" />
+                        <TextInput style={styles.input} placeholder="Número de Celular (+56...)" placeholderTextColor="#555" value={telefono} onChangeText={setTelefono} keyboardType="phone-pad" selectionColor="#D4AF37" />
+                        <TextInput style={styles.input} placeholder="Nombre de la Festejada" placeholderTextColor="#555" value={festejada} onChangeText={setFestejada} selectionColor="#D4AF37" />
                         
                         <Text style={styles.sectionTitle}>Cita & Comuna</Text>
                         <View style={styles.row}>
-                            <TouchableOpacity style={[styles.input, { flex: 1, marginRight: 10 }]} onPress={() => setShowDatePicker(true)}><Text style={{ color: '#FFF' }}>{fecha ? formatToDMY(fecha) : 'Fecha'}</Text></TouchableOpacity>
-                            <TouchableOpacity style={[styles.input, { flex: 1 }]} onPress={() => setShowTimePicker(true)}><Text style={{ color: '#FFF' }}>{hora || 'Hora'}</Text></TouchableOpacity>
+                            <TouchableOpacity style={[styles.input, { flex: 1, marginRight: 10, flexDirection: 'row', alignItems: 'center' }]} onPress={() => setShowDatePicker(true)}>
+                                <CalendarIcon size={16} color="#D4AF37" style={{ marginRight: 8 }} />
+                                <Text style={{ color: '#FFF' }}>{fecha ? formatToDMY(fecha) : 'Seleccionar Fecha'}</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.input, { flex: 1, flexDirection: 'row', alignItems: 'center' }]} onPress={() => setShowTimePicker(true)}>
+                                <Clock size={16} color="#D4AF37" style={{ marginRight: 8 }} />
+                                <Text style={{ color: '#FFF' }}>{hora || 'Seleccionar Hora'}</Text>
+                            </TouchableOpacity>
                         </View>
                         {showDatePicker && <DateTimePicker value={new Date()} mode="date" display="default" onChange={(e, d) => { setShowDatePicker(false); if(d) setFecha(d.toISOString().split('T')[0]); }} />}
                         {showTimePicker && <DateTimePicker value={new Date()} mode="time" display="default" onChange={(e, t) => { setShowTimePicker(false); if(t) setHora(`${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`); }} />}
                         
-                        <TextInput style={styles.input} placeholder="Dirección" placeholderTextColor="#555" value={direccion} onChangeText={setDireccion} />
+                        <TextInput style={styles.input} placeholder="Dirección del Evento" placeholderTextColor="#555" value={direccion} onChangeText={setDireccion} selectionColor="#D4AF37" />
                         <TouchableOpacity style={styles.input} onPress={() => setShowComunaPicker(true)}>
-                            <Text style={{ color: comuna ? '#FFF' : '#555' }}>{comuna || 'Seleccionar Comuna'}</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <MapPin size={16} color="#D4AF37" style={{ marginRight: 8 }} />
+                                <Text style={{ color: comuna ? '#FFF' : '#555' }}>{comuna || 'Seleccionar Comuna'}</Text>
+                            </View>
                         </TouchableOpacity>
 
-                        <Text style={styles.sectionTitle}>Servicio & Precio</Text>
+                        <Text style={styles.sectionTitle}>Repertorio & Servicio</Text>
+                        <TouchableOpacity style={[styles.input, { backgroundColor: 'rgba(212,175,55,0.1)', borderColor: '#D4AF37' }]} onPress={() => setShowSongPicker(true)}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <Music size={16} color="#D4AF37" style={{ marginRight: 8 }} />
+                                <Text style={{ color: '#FFF' }}>{canciones.length > 0 ? `${canciones.length} canciones elegidas` : 'ELEGIR CANCIONES'}</Text>
+                            </View>
+                        </TouchableOpacity>
+
                         <View style={styles.typeRow}>
                             {['express', 'full', 'personalizado'].map(t => (
                             <TouchableOpacity key={t} style={[styles.typeBtn, tipo === t && styles.typeBtnActive]} onPress={() => setTipo(t)}><Text style={[styles.typeBtnText, tipo === t && styles.typeBtnTextActive]}>{t.toUpperCase()}</Text></TouchableOpacity>
                             ))}
                         </View>
-                        <TextInput style={styles.input} value={precio} onChangeText={setPrecio} keyboardType="numeric" editable={tipo === 'personalizado'} />
+                        <TextInput style={styles.input} value={precio} onChangeText={setPrecio} keyboardType="numeric" editable={tipo === 'personalizado'} selectionColor="#D4AF37" />
 
-                        <TouchableOpacity style={styles.submitBtn} onPress={handleCreateOrUpdate}><Text style={styles.submitBtnText}>CONFIRMAR</Text></TouchableOpacity>
+                        <TouchableOpacity style={styles.submitBtn} onPress={handleCreateOrUpdate}><Text style={styles.submitBtnText}>CONFIRMAR SERENATA</Text></TouchableOpacity>
                         
                         {editingId && (
                             <TouchableOpacity style={[styles.submitBtn, { backgroundColor: 'transparent', borderWidth: 1, borderColor: '#e74c3c', marginTop: 15 }]} onPress={() => {
                                 Alert.alert('Eliminar', '¿Seguro?', [{text:'No'},{text:'Sí', onPress: async()=> {await supabase.from('serenatas').delete().eq('id', editingId); setShowModal(false); fetchData();}}]);
-                            }}><Text style={{ color: '#e74c3c' }}>ELIMINAR SERENATA</Text></TouchableOpacity>
+                            }}><Text style={{ color: '#e74c3c', fontWeight: 'bold' }}>ELIMINAR SERENATA</Text></TouchableOpacity>
                         )}
-                        <View style={{ height: 100 }} />
+                        <View style={{ height: 120 }} />
                     </ScrollView>
                 </View>
             </KeyboardAvoidingView>

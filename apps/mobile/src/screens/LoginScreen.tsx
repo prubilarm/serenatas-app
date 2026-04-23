@@ -64,6 +64,9 @@ export default function LoginScreen({ onLogin }: any) {
                   onChangeText={setEmail}
                   autoCapitalize="none"
                   keyboardType="email-address"
+                  autoComplete="off"
+                  importantForAutofill="no"
+                  selectionColor="#D4AF37"
                 />
               </View>
 
@@ -76,6 +79,9 @@ export default function LoginScreen({ onLogin }: any) {
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry
+                  autoComplete="off"
+                  importantForAutofill="no"
+                  selectionColor="#D4AF37"
                 />
               </View>
 
