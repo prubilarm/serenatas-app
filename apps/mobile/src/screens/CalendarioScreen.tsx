@@ -77,8 +77,8 @@ export default function CalendarioScreen() {
       <ImageBackground source={require('../../assets/fondo_app.jpg')} style={{ flex: 1 }} resizeMode="cover">
         <View style={styles.overlay}>
           <View style={styles.header}>
-            <Text style={styles.title}>Calendario de Serenatas</Text>
-            <Text style={styles.subtitle}>Gestión Visual en Tiempo Real</Text>
+            <Text style={styles.title}>CALENDARIO</Text>
+            <Text style={styles.subtitle}>GESTIÓN VISUAL MARIACHI</Text>
           </View>
 
           {loading && !refreshing ? (
@@ -143,9 +143,14 @@ export default function CalendarioScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)' },
-  header: { padding: 25, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
-  title: { color: '#D4AF37', fontSize: 24, fontWeight: 'bold' },
-  subtitle: { color: '#666', fontSize: 10, textTransform: 'uppercase', letterSpacing: 2, marginTop: 4 },
+  header: { 
+    paddingHorizontal: 30, 
+    paddingTop: Platform.OS === 'ios' ? 60 : 50, 
+    paddingBottom: 20,
+    alignItems: 'center' 
+  },
+  title: { color: '#D4AF37', fontSize: 28, fontWeight: 'bold', letterSpacing: 4 },
+  subtitle: { color: '#FFF', fontSize: 10, fontWeight: 'bold', letterSpacing: 6, marginTop: 4, opacity: 0.6 },
   calendarContainer: { 
     margin: 15, 
     backgroundColor: 'rgba(255,255,255,0.03)', 

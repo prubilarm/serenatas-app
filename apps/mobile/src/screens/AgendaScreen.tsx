@@ -39,13 +39,22 @@ const formatToDMY = (dateStr: string) => {
 // MODAL DE CANCIONES
 const SongPickerModal = ({ visible, canciones, onClose, onToggle, limit }: any) => {
   const [search, setSearch] = useState('');
+  const [customSong, setCustomSong] = useState('');
+
   const filteredSongs = useMemo(() => {
     return LISTADO_CANCIONES.filter(s => s.toLowerCase().includes(search.toLowerCase()));
   }, [search]);
 
   const handleSelect = (s: string) => {
     onToggle(s);
-    setSearch(''); // Auto-reset search on selection
+    setSearch('');
+  };
+
+  const handleAddCustom = () => {
+    if (customSong.trim()) {
+      onToggle(customSong.trim());
+      setCustomSong('');
+    }
   };
 
   return (
@@ -60,12 +69,23 @@ const SongPickerModal = ({ visible, canciones, onClose, onToggle, limit }: any) 
                 </View>
                 <TouchableOpacity style={styles.pickerDoneBtn} onPress={onClose}><Text style={styles.pickerDoneText}>Listo</Text></TouchableOpacity>
             </View>
-            <TextInput style={styles.pickerSearch} placeholder="Buscar canción..." placeholderTextColor="#666" value={search} onChangeText={setSearch} />
-            <ScrollView style={{ flex: 1, padding: 20 }}>
+            
+            <View style={styles.customSongBox}>
+              <TextInput 
+                style={styles.customInput} 
+                placeholder="¿Otra canción? Escríbela aquí..." 
+                placeholderTextColor="#666" 
+                value={customSong} 
+                onChangeText={setCustomSong} 
+              />
+              <TouchableOpacity style={styles.addCustomBtn} onPress={handleAddCustom}>
+                <Plus size={20} color="#000" />
+              </TouchableOpacity>
+            </View>
+
+            <TextInput style={styles.pickerSearch} placeholder="Buscar en lista..." placeholderTextColor="#666" value={search} onChangeText={setSearch} />
+            <ScrollView style={{ flex: 1, paddingHorizontal: 20 }}>
                 {filteredSongs.map(s => (
-                    <TouchableOpacity key={s} style={[styles.songItem, canciones.includes(s) && styles.songActive]} onPress={() => handleSelect(s)}>
-                        <Text style={[styles.songText, canciones.includes(s) && styles.whiteText]}>{s}</Text>
-                        {canciones.includes(s) && <Check size={16} color="#000" />}
                     </TouchableOpacity>
                 ))}
             </ScrollView>
@@ -189,9 +209,16 @@ export default function AgendaScreen() {
       <StatusBar barStyle="light-content" />
       <ImageBackground source={require('../../assets/fondo_app.jpg')} style={{ flex: 1 }} resizeMode="cover">
       <View style={styles.bgOverlay}>
-        <View style={styles.header}><Text style={styles.headerTitle}>Agenda</Text><Text style={styles.headerSubtitle}>v5.0 ELITE</Text></View>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>AGENDA</Text>
+          <Text style={styles.headerSubtitle}>MARIACHI AVENTURERO</Text>
+        </View>
         <View style={styles.searchBarWrapper}><View style={styles.searchBar}><Search size={18} color="#666" /><TextInput style={styles.searchBarInput} placeholder="Buscar..." placeholderTextColor="#444" value={searchQuery} onChangeText={setSearchQuery} /></View></View>
-        <ScrollView contentContainerStyle={styles.scrollContent} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} tintColor="#D4AF37" />}>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent} 
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} tintColor="#D4AF37" />}
+        >
           {filteredSerenatas.map((s: any) => <SerenataCard key={s.id} serenata={s} onUpdate={fetchData} onEdit={() => handleEdit(s)} />)}
           <View style={{ height: 100 }} />
         </ScrollView>
@@ -290,9 +317,14 @@ export default function AgendaScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
   bgOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)' },
-  header: { padding: 30, paddingTop: 20, alignItems: 'center' },
-  headerTitle: { color: '#FFF', fontSize: 32, fontWeight: 'bold', letterSpacing: 2 },
-  headerSubtitle: { color: '#D4AF37', fontSize: 10, fontWeight: 'bold', letterSpacing: 5, marginTop: 5 },
+  header: { 
+    paddingHorizontal: 30, 
+    paddingTop: Platform.OS === 'ios' ? 60 : 50, 
+    paddingBottom: 20,
+    alignItems: 'center' 
+  },
+  headerTitle: { color: '#D4AF37', fontSize: 28, fontWeight: 'bold', letterSpacing: 4 },
+  headerSubtitle: { color: '#FFF', fontSize: 10, fontWeight: 'bold', letterSpacing: 6, marginTop: 4, opacity: 0.6 },
   searchBarWrapper: { paddingHorizontal: 25, marginBottom: 15 },
   searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#111', borderRadius: 15, paddingHorizontal: 15, height: 50 },
   searchBarInput: { flex: 1, color: '#FFF', marginLeft: 10 },
@@ -317,7 +349,10 @@ const styles = StyleSheet.create({
   pickerHeader: { padding: 25, flexDirection: 'row', justifyContent: 'space-between' },
   pickerTitle: { color: '#D4AF37', fontSize: 22, fontWeight: 'bold' },
   pickerSubtitle: { color: '#666', fontSize: 11 },
-  pickerSearch: { backgroundColor: 'rgba(255,255,255,0.05)', margin: 20, padding: 15, borderRadius: 15, color: '#FFF' },
+  pickerSearch: { backgroundColor: 'rgba(255,255,255,0.05)', marginHorizontal: 20, marginBottom: 10, padding: 15, borderRadius: 15, color: '#FFF' },
+  customSongBox: { flexDirection: 'row', paddingHorizontal: 20, marginBottom: 10, gap: 10 },
+  customInput: { flex: 1, backgroundColor: 'rgba(212,175,55,0.1)', borderRadius: 12, padding: 12, color: '#FFF', borderWidth: 1, borderColor: '#D4AF37' },
+  addCustomBtn: { backgroundColor: '#D4AF37', width: 50, height: 50, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
   songItem: { flexDirection: 'row', justifyContent: 'space-between', padding: 15, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 12, marginBottom: 8 },
   songActive: { backgroundColor: '#D4AF37' },
   songText: { color: '#666' },

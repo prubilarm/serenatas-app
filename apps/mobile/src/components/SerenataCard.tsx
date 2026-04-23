@@ -39,16 +39,14 @@ export default function SerenataCard({ serenata, onUpdate, onEdit }: any) {
       }).eq('id', s.id);
       
       setShowPaymentModal(false);
+      if (onUpdate) onUpdate();
       
       Alert.alert(
         'Servicio Finalizado',
         '¿Deseas enviar el comprobante de pago por WhatsApp?',
         [
-          { text: 'No', onPress: () => onUpdate && onUpdate() },
-          { text: 'SÍ, ENVIAR', onPress: () => {
-            handleWhatsAppPago();
-            if (onUpdate) onUpdate();
-          }}
+          { text: 'No', onPress: () => {} },
+          { text: 'SÍ, ENVIAR', onPress: () => handleWhatsAppPago() }
         ]
       );
     } catch (e: any) { Alert.alert('Error', e.message); }
@@ -164,10 +162,17 @@ Hola *${s.nombre_cliente}*, tu reserva ha sido agendada con éxito.
           )}
         </View>
         <View style={styles.buttonGroup}>
-          <TouchableOpacity style={[styles.btnAction, {backgroundColor: '#111', borderColor: '#222', borderWidth: 1}]} onPress={handleWhatsAppReserva}>
-             <FileText size={18} color="#D4AF37" />
+          <TouchableOpacity 
+            style={[styles.btnAction, {backgroundColor: '#111', borderColor: '#D4AF37', borderWidth: 1}]} 
+            onPress={handleWhatsAppReserva}
+          >
+             <MessageCircle size={18} color="#D4AF37" />
+             <Text style={[styles.btnLabel, {color: '#D4AF37'}]}>RESERVA</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.btnAction, {backgroundColor: s.estado === 'completada' ? '#2ecc71' : '#D4AF37'}]} onPress={handleStatusToggle}>
+          <TouchableOpacity 
+            style={[styles.btnAction, {backgroundColor: s.estado === 'completada' ? '#2ecc71' : '#D4AF37'}]} 
+            onPress={handleStatusToggle}
+          >
              <Check size={20} color="#000" />
              <Text style={styles.btnLabel}>{s.estado === 'completada' ? 'FINALIZADA' : 'FINALIZAR'}</Text>
           </TouchableOpacity>

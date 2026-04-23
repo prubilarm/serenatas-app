@@ -42,7 +42,7 @@ export default function FinalizadasScreen() {
       <ImageBackground source={require('../../assets/fondo_app.jpg')} style={{ flex: 1 }} resizeMode="cover">
       <View style={styles.bgOverlay}>
         <View style={styles.header}>
-            <Text style={styles.headerTitle}>Finalizadas</Text>
+            <Text style={styles.headerTitle}>FINALIZADAS</Text>
             <Text style={styles.headerSubtitle}>HISTORIAL DE ÉXITO</Text>
         </View>
 
@@ -81,9 +81,14 @@ export default function FinalizadasScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
   bgOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)' },
-  header: { padding: 30, paddingTop: 20, alignItems: 'center' },
-  headerTitle: { color: '#FFF', fontSize: 32, fontWeight: 'bold' },
-  headerSubtitle: { color: '#2ecc71', fontSize: 11, fontWeight: 'bold', letterSpacing: 5 },
+  header: { 
+    paddingHorizontal: 30, 
+    paddingTop: Platform.OS === 'ios' ? 60 : 50, 
+    paddingBottom: 20,
+    alignItems: 'center' 
+  },
+  headerTitle: { color: '#2ecc71', fontSize: 28, fontWeight: 'bold', letterSpacing: 4 },
+  headerSubtitle: { color: '#FFF', fontSize: 10, fontWeight: 'bold', letterSpacing: 6, marginTop: 4, opacity: 0.6 },
   searchBarWrapper: { paddingHorizontal: 25, marginBottom: 15 },
   searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#111', borderRadius: 15, paddingHorizontal: 15, height: 50 },
   searchBarInput: { flex: 1, color: '#FFF', marginLeft: 10 },

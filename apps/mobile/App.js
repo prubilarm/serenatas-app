@@ -4,6 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
+import * as NavigationBar from 'expo-navigation-bar';
 import { Calendar as CalendarIcon, List, BarChart3, CheckCircle2 } from 'lucide-react-native';
 
 // Screens
@@ -40,9 +41,11 @@ function MainTabs() {
         tabBarStyle: {
           backgroundColor: '#0A0A0A',
           borderTopColor: '#222',
-          paddingBottom: Platform.OS === 'android' ? 35 : 45,
-          height: Platform.OS === 'android' ? 85 : 105,
+          paddingBottom: Platform.OS === 'android' ? 25 : 45,
+          height: Platform.OS === 'android' ? 75 : 105,
           borderTopWidth: 1,
+          elevation: 0,
+          shadowOpacity: 0
         },
       })}
     >
@@ -100,6 +103,18 @@ export default function App() {
       setSession(session);
       resetTimer();
     });
+
+    // Modo Inmersivo para Android
+    if (Platform.OS === 'android') {
+      const setImmersive = async () => {
+        try {
+          await NavigationBar.setVisibilityAsync('hidden');
+          await NavigationBar.setBehaviorAsync('inset-touch');
+          await NavigationBar.setBackgroundColorAsync('#000000');
+        } catch (e) {}
+      };
+      setImmersive();
+    }
 
     return () => {
       subscription.unsubscribe();

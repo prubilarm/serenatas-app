@@ -35,8 +35,8 @@ export default function ReportesScreen() {
       <ImageBackground source={require('../../assets/fondo_app.jpg')} style={{ flex: 1 }} resizeMode="cover">
       <View style={styles.overlay}>
         <View style={styles.header}>
-            <Text style={styles.title}>Reportes & Analítica</Text>
-            <Text style={styles.subtitle}>Resumen Financiero Mariachi</Text>
+            <Text style={styles.title}>REPORTES</Text>
+            <Text style={styles.subtitle}>RESUMEN FINANCIERO MARIACHI</Text>
         </View>
 
         {loading ? (
@@ -79,9 +79,14 @@ export default function ReportesScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)' },
-  header: { padding: 25, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
-  title: { color: '#FFF', fontSize: 24, fontWeight: 'bold' },
-  subtitle: { color: '#D4AF37', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 2 },
+  header: { 
+    paddingHorizontal: 30, 
+    paddingTop: Platform.OS === 'ios' ? 60 : 50, 
+    paddingBottom: 20,
+    alignItems: 'center' 
+  },
+  title: { color: '#FFF', fontSize: 28, fontWeight: 'bold', letterSpacing: 4 },
+  subtitle: { color: '#D4AF37', fontSize: 10, fontWeight: 'bold', letterSpacing: 6, marginTop: 4, opacity: 0.8 },
   content: { padding: 25 },
   statCard: { backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 20, padding: 25, marginBottom: 20, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
   row: { flexDirection: 'row', marginBottom: 20 },
