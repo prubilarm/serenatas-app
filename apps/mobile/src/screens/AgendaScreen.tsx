@@ -158,7 +158,6 @@ export default function AgendaScreen() {
         <View style={styles.bgOverlay}>
           <View style={styles.header}>
             <View><Text style={styles.headerTitle}>Agenda</Text><Text style={styles.headerSubtitle}>Sistema Aventurero v4.5</Text></View>
-            <TouchableOpacity style={styles.refreshBtn} onPress={() => { setRefreshing(true); fetchData(); }}><Search size={22} color="#D4AF37" /></TouchableOpacity>
           </View>
 
           <View style={styles.searchBarWrapper}>
