@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   StyleSheet, View, Text, ScrollView, TouchableOpacity, 
   ActivityIndicator, RefreshControl, SafeAreaView, Modal, 
-  TextInput, Alert, Platform, StatusBar, ImageBackground 
+  TextInput, Alert, Platform, StatusBar, ImageBackground,
+  KeyboardAvoidingView
 } from 'react-native';
 import { 
   Plus, Music, X, Calendar as CalendarIcon, MapPin, 
@@ -92,11 +93,9 @@ export default function AgendaScreen() {
   const [tipo, setTipo] = useState('express');
   const [canciones, setCanciones] = useState<string[]>([]);
 
-  // Lógica de Precios Automática
   useEffect(() => {
     if (tipo === 'express') setPrecio('25000');
     else if (tipo === 'full') setPrecio('40000');
-    // Si es personalizado, no hacemos nada y dejamos que el usuario escriba
   }, [tipo]);
 
   const fetchData = async () => {
@@ -190,77 +189,83 @@ export default function AgendaScreen() {
         </View>
       </ImageBackground>
 
-      {/* MODAL DE AGENDA */}
+      {/* MODAL DE AGENDA CON PREVENCIÓN DE TECLADO */}
       <Modal visible={showModal} animationType="slide" transparent={true}>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{editingId ? 'EDITAR' : 'NUEVA'} SERENATA</Text>
-              <TouchableOpacity onPress={() => setShowModal(false)}><X color="#666" size={28} /></TouchableOpacity>
-            </View>
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Identidad</Text>
-                <TextInput style={styles.input} placeholder="Nombre Cliente" placeholderTextColor="#555" value={nombreCliente} onChangeText={setNombreCliente} />
-                <TextInput style={styles.input} placeholder="Teléfono" placeholderTextColor="#555" value={telefono} onChangeText={setTelefono} keyboardType="phone-pad" />
-                <TextInput style={styles.input} placeholder="Nombre Festejada" placeholderTextColor="#555" value={festejada} onChangeText={setFestejada} />
+          <KeyboardAvoidingView 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+            style={{ flex: 1, justifyContent: 'flex-end' }}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+          >
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>{editingId ? 'EDITAR' : 'NUEVA'} SERENATA</Text>
+                <TouchableOpacity onPress={() => setShowModal(false)}><X color="#666" size={28} /></TouchableOpacity>
               </View>
-
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Cita</Text>
-                <View style={styles.row}>
-                  <TouchableOpacity style={[styles.input, { flex: 1, marginRight: 10, flexDirection: 'row', alignItems: 'center' }]} onPress={() => setShowDatePicker(true)}>
-                    <CalendarIcon size={16} color="#D4AF37" style={{ marginRight: 8 }} />
-                    <Text style={{ color: '#FFF' }}>{fecha ? formatToDMY(fecha) : 'Fecha'}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.input, { flex: 1, flexDirection: 'row', alignItems: 'center' }]} onPress={() => setShowTimePicker(true)}>
-                    <Clock size={16} color="#D4AF37" style={{ marginRight: 8 }} />
-                    <Text style={{ color: '#FFF' }}>{hora || 'Hora'}</Text>
-                  </TouchableOpacity>
+              <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Identidad</Text>
+                  <TextInput style={styles.input} placeholder="Nombre Cliente" placeholderTextColor="#555" value={nombreCliente} onChangeText={setNombreCliente} />
+                  <TextInput style={styles.input} placeholder="Teléfono" placeholderTextColor="#555" value={telefono} onChangeText={setTelefono} keyboardType="phone-pad" />
+                  <TextInput style={styles.input} placeholder="Nombre Festejada" placeholderTextColor="#555" value={festejada} onChangeText={setFestejada} />
                 </View>
-                {showDatePicker && <DateTimePicker value={fecha ? new Date(fecha + 'T12:00:00') : new Date()} mode="date" display="default" onChange={(e, d) => { setShowDatePicker(false); if(d) setFecha(d.toISOString().split('T')[0]); }} />}
-                {showTimePicker && <DateTimePicker value={new Date()} mode="time" is24Hour={true} display="default" onChange={(e, t) => { setShowTimePicker(false); if(t) setHora(`${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`); }} />}
-                <TextInput style={styles.input} placeholder="Dirección" placeholderTextColor="#555" value={direccion} onChangeText={setDireccion} />
-                <TextInput style={styles.input} placeholder="Comuna" placeholderTextColor="#555" value={comuna} onChangeText={setComuna} />
-              </View>
 
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Tipo de Servicio</Text>
-                <View style={styles.typeRow}>
-                  {['express', 'full', 'personalizado'].map(t => (
-                    <TouchableOpacity key={t} style={[styles.typeBtn, tipo === t && styles.typeBtnActive]} onPress={() => setTipo(t)}>
-                      <Text style={[styles.typeBtnText, tipo === t && styles.typeBtnTextActive]}>{t.toUpperCase()}</Text>
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Cita</Text>
+                  <View style={styles.row}>
+                    <TouchableOpacity style={[styles.input, { flex: 1, marginRight: 10, flexDirection: 'row', alignItems: 'center' }]} onPress={() => setShowDatePicker(true)}>
+                      <CalendarIcon size={16} color="#D4AF37" style={{ marginRight: 8 }} />
+                      <Text style={{ color: '#FFF' }}>{fecha ? formatToDMY(fecha) : 'Fecha'}</Text>
                     </TouchableOpacity>
-                  ))}
+                    <TouchableOpacity style={[styles.input, { flex: 1, flexDirection: 'row', alignItems: 'center' }]} onPress={() => setShowTimePicker(true)}>
+                      <Clock size={16} color="#D4AF37" style={{ marginRight: 8 }} />
+                      <Text style={{ color: '#FFF' }}>{hora || 'Hora'}</Text>
+                    </TouchableOpacity>
+                  </View>
+                  {showDatePicker && <DateTimePicker value={fecha ? new Date(fecha + 'T12:00:00') : new Date()} mode="date" display="default" onChange={(e, d) => { setShowDatePicker(false); if(d) setFecha(d.toISOString().split('T')[0]); }} />}
+                  {showTimePicker && <DateTimePicker value={new Date()} mode="time" is24Hour={true} display="default" onChange={(e, t) => { setShowTimePicker(false); if(t) setHora(`${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`); }} />}
+                  <TextInput style={styles.input} placeholder="Dirección" placeholderTextColor="#555" value={direccion} onChangeText={setDireccion} />
+                  <TextInput style={styles.input} placeholder="Comuna" placeholderTextColor="#555" value={comuna} onChangeText={setComuna} />
                 </View>
-                <View style={styles.priceField}>
-                  <DollarSign size={18} color="#D4AF37" />
-                  <TextInput 
-                    style={styles.priceInput} 
-                    value={precio} 
-                    onChangeText={setPrecio} 
-                    keyboardType="numeric" 
-                    editable={tipo === 'personalizado'} // Solo editable si es personalizado
-                  />
-                  <Text style={{ color: '#666', fontSize: 10 }}>{tipo === 'personalizado' ? 'MONTO LIBRE' : 'MONTO FIJO'}</Text>
+
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Tipo de Servicio</Text>
+                  <View style={styles.typeRow}>
+                    {['express', 'full', 'personalizado'].map(t => (
+                      <TouchableOpacity key={t} style={[styles.typeBtn, tipo === t && styles.typeBtnActive]} onPress={() => setTipo(t)}>
+                        <Text style={[styles.typeBtnText, tipo === t && styles.typeBtnTextActive]}>{t.toUpperCase()}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  <View style={styles.priceField}>
+                    <DollarSign size={18} color="#D4AF37" />
+                    <TextInput 
+                      style={styles.priceInput} 
+                      value={precio} 
+                      onChangeText={setPrecio} 
+                      keyboardType="numeric" 
+                      editable={tipo === 'personalizado'}
+                    />
+                    <Text style={{ color: '#666', fontSize: 10 }}>{tipo === 'personalizado' ? 'MONTO LIBRE' : 'MONTO FIJO'}</Text>
+                  </View>
                 </View>
-              </View>
 
-              <View style={styles.section}>
-                 <Text style={styles.sectionTitle}>Repertorio Musical</Text>
-                 <TouchableOpacity style={styles.pickerBtn} onPress={() => setShowSongPicker(true)}>
-                    <Music size={20} color="#D4AF37" />
-                    <Text style={styles.pickerBtnText}>{canciones.length ? `${canciones.length} canciones elegidas` : 'Seleccionar canciones'}</Text>
-                    <ChevronRight size={20} color="#333" />
-                 </TouchableOpacity>
-              </View>
+                <View style={styles.section}>
+                   <Text style={styles.sectionTitle}>Repertorio Musical</Text>
+                   <TouchableOpacity style={styles.pickerBtn} onPress={() => setShowSongPicker(true)}>
+                      <Music size={20} color="#D4AF37" />
+                      <Text style={styles.pickerBtnText}>{canciones.length ? `${canciones.length} canciones elegidas` : 'Seleccionar canciones'}</Text>
+                      <ChevronRight size={20} color="#333" />
+                   </TouchableOpacity>
+                </View>
 
-              <TouchableOpacity style={styles.submitBtn} onPress={handleCreateOrUpdate}>
-                <Text style={styles.submitBtnText}>CONFIRMAR AGENDAMIENTO</Text>
-              </TouchableOpacity>
-              <View style={{ height: 40 }} />
-            </ScrollView>
-          </View>
+                <TouchableOpacity style={styles.submitBtn} onPress={handleCreateOrUpdate}>
+                  <Text style={styles.submitBtnText}>CONFIRMAR AGENDAMIENTO</Text>
+                </TouchableOpacity>
+                <View style={{ height: Platform.OS === 'ios' ? 120 : 60 }} />
+              </ScrollView>
+            </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
 
@@ -271,7 +276,7 @@ export default function AgendaScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
-  bgOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)' },
+  bgOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)' },
   header: { padding: 25, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   headerTitle: { color: '#FFF', fontSize: 28, fontWeight: 'bold' },
   headerSubtitle: { color: '#D4AF37', fontSize: 11, fontWeight: 'bold' },
@@ -285,9 +290,9 @@ const styles = StyleSheet.create({
   filterText: { color: '#666', fontSize: 10, fontWeight: 'bold' },
   filterTextActive: { color: '#000' },
   scrollContent: { padding: 20 },
-  fab: { position: 'absolute', bottom: 30, right: 25, width: 65, height: 65, borderRadius: 32, backgroundColor: '#D4AF37', justifyContent: 'center', alignItems: 'center', elevation: 10 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: '#0D0D0D', borderTopLeftRadius: 35, borderTopRightRadius: 35, height: '92%', padding: 25 },
+  fab: { position: 'absolute', bottom: 30, right: 25, width: 65, height: 65, borderRadius: 32, backgroundColor: '#D4AF37', justifyContent: 'center', alignItems: 'center' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.92)' },
+  modalContent: { backgroundColor: '#0D0D0D', borderTopLeftRadius: 35, borderTopRightRadius: 35, height: '90%', padding: 25 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 },
   modalTitle: { color: '#D4AF37', fontSize: 20, fontWeight: 'bold', letterSpacing: 1 },
   section: { marginBottom: 25 },
@@ -304,8 +309,8 @@ const styles = StyleSheet.create({
   pickerBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#161616', padding: 18, borderRadius: 15, borderWidth: 1, borderColor: '#222' },
   pickerBtnText: { flex: 1, color: '#FFF', marginLeft: 15, fontSize: 14 },
   submitBtn: { backgroundColor: '#D4AF37', padding: 20, borderRadius: 18, alignItems: 'center', marginTop: 10 },
-  submitBtnText: { color: '#000', fontWeight: 'bold', fontSize: 15, letterSpacing: 1 },
-  pickerOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'flex-end' },
+  submitBtnText: { color: '#000', fontWeight: 'bold', fontSize: 15 },
+  pickerOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', justifyContent: 'flex-end' },
   pickerSheet: { backgroundColor: '#0D0D0D', borderTopLeftRadius: 30, borderTopRightRadius: 30, height: '85%' },
   pickerHeader: { padding: 25, flexDirection: 'row', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: '#222' },
   pickerTitle: { color: '#D4AF37', fontSize: 22, fontWeight: 'bold' },
