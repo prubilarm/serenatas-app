@@ -6,8 +6,8 @@ import Sidebar from "@/components/Sidebar";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "El Mariachi Aventurero | Gestión",
-  description: "Sistema interno de gestión de serenatas",
+  title: "SISTEMA AVENTURERO v4.0 | El Mariachi",
+  description: "Gestión Profesional de Serenatas",
 };
 
 // ── En Next.js 13+ App Router, el viewport se exporta así ──
