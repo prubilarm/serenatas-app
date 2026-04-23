@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Linking, Alert, Platform } from 'react-native';
 import { 
   Phone, MessageCircle, FileText, MapPin, 
-  Trash2, Edit3, Clock, DollarSign, Calendar, Check
+  Trash2, Edit3, Clock, DollarSign, Calendar, Check, RotateCcw
 } from 'lucide-react-native';
 import { supabase } from '../lib/supabase';
 
@@ -90,7 +90,15 @@ export default function SerenataCard({ serenata, onUpdate, onEdit }: any) {
       </TouchableOpacity>
 
       <View style={styles.cardFooter}>
-        <View style={styles.priceContainer}><DollarSign size={16} color="#2ecc71" /><Text style={styles.priceValue}>{s.precio_total?.toLocaleString()}</Text></View>
+        <View style={styles.priceContainer}>
+          <DollarSign size={16} color="#2ecc71" />
+          <Text style={styles.priceValue}>{s.precio_total?.toLocaleString()}</Text>
+          {s.estado === 'completada' && (
+            <TouchableOpacity onPress={handleStatusToggle} style={{ marginLeft: 15, padding: 5 }}>
+              <RotateCcw size={16} color="#666" />
+            </TouchableOpacity>
+          )}
+        </View>
         <View style={styles.buttonGroup}>
           <TouchableOpacity style={[styles.btnAction, {backgroundColor: '#111', borderColor: '#222', borderWidth: 1}]} onPress={handleWhatsAppReserva}>
              <FileText size={18} color="#D4AF37" />

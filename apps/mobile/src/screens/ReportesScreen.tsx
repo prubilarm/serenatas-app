@@ -1,96 +1,93 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  StyleSheet, 
-  View, 
-  Text, 
-  ScrollView, 
-  SafeAreaView, 
-  Dimensions
-} from 'react-native';
-import { TrendingUp, DollarSign, Calendar, Music } from 'lucide-react-native';
+import { StyleSheet, View, Text, SafeAreaView, ActivityIndicator, ImageBackground, TouchableOpacity, ScrollView, Alert, Linking } from 'react-native';
+import { BarChart3, FileText, Download, Share2, TrendingUp } from 'lucide-react-native';
 import { supabase } from '../lib/supabase';
 
-const { width } = Dimensions.get('window');
-
 export default function ReportesScreen() {
-  const [stats, setStats] = useState({
-    totalIngresos: 0,
-    totalSerenatas: 0,
-    serenatasMes: 0
-  });
+  const [totalSerenatas, setTotalSerenatas] = useState(0);
+  const [completadas, setCompletadas] = useState(0);
+  const [ingresos, setIngresos] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  const fetchStats = async () => {
+    const { data } = await supabase.from('serenatas').select('*');
+    if (data) {
+      setTotalSerenatas(data.length);
+      const done = data.filter(s => s.estado === 'completada');
+      setCompletadas(done.length);
+      const total = done.reduce((acc, curr) => acc + (curr.precio_total || 0), 0);
+      setIngresos(total);
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
-    const fetchStats = async () => {
-      const { data } = await supabase.from('serenatas').select('*');
-      if (data) {
-        const ingresos = data.reduce((acc: number, curr: any) => acc + (curr.precio_total || 0), 0);
-        setStats({
-          totalIngresos: ingresos,
-          totalSerenatas: data.length,
-          serenatasMes: data.filter((s: any) => s.estado === 'completada').length
-        });
-      }
-    };
     fetchStats();
   }, []);
 
+  const downloadReport = () => {
+    const url = 'https://api-alpha-five-25.vercel.app/api/reportes/pdf';
+    Linking.openURL(url);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Reportes</Text>
+      <ImageBackground source={require('../../assets/fondo_app.jpg')} style={{ flex: 1 }} resizeMode="cover">
+      <View style={styles.overlay}>
+        <View style={styles.header}>
+            <Text style={styles.title}>Reportes & Analítica</Text>
+            <Text style={styles.subtitle}>Resumen Financiero Mariachi</Text>
+        </View>
+
+        {loading ? (
+          <ActivityIndicator size="large" color="#D4AF37" style={{ marginTop: 50 }} />
+        ) : (
+          <ScrollView contentContainerStyle={styles.content}>
+            <View style={styles.statCard}>
+                <TrendingUp color="#D4AF37" size={32} />
+                <View style={{ marginLeft: 20 }}>
+                    <Text style={styles.statLabel}>INGRESOS TOTALES</Text>
+                    <Text style={styles.statValue}>${ingresos.toLocaleString()}</Text>
+                </View>
+            </View>
+
+            <View style={styles.row}>
+                <View style={[styles.statCard, { flex: 1, marginRight: 10 }]}>
+                    <Text style={styles.statLabel}>SERENATAS</Text>
+                    <Text style={styles.statValue}>{totalSerenatas}</Text>
+                </View>
+                <View style={[styles.statCard, { flex: 1 }]}>
+                    <Text style={styles.statLabel}>REALIZADAS</Text>
+                    <Text style={styles.statValue}>{completadas}</Text>
+                </View>
+            </View>
+
+            <TouchableOpacity style={styles.downloadBtn} onPress={downloadReport}>
+                <FileText color="#000" size={24} />
+                <Text style={styles.downloadText}>DESCARGAR REPORTE GENERAL (PDF)</Text>
+            </TouchableOpacity>
+
+            <Text style={styles.infoFooter}>Los reportes se generan en tiempo real basados en los datos de la nube.</Text>
+          </ScrollView>
+        )}
       </View>
-
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>Ingresos Totales</Text>
-          <Text style={styles.summaryValue}>${stats.totalIngresos.toLocaleString()}</Text>
-          <View style={styles.trend}>
-             <TrendingUp size={16} color="#25D366" />
-             <Text style={styles.trendText}>Tendencia Positiva</Text>
-          </View>
-        </View>
-
-        <View style={styles.grid}>
-          <View style={styles.smallCard}>
-            <Calendar color="#D4AF37" size={24} />
-            <Text style={styles.cardVal}>{stats.totalSerenatas}</Text>
-            <Text style={styles.cardLab}>Eventos</Text>
-          </View>
-          <View style={styles.smallCard}>
-            <Music color="#D4AF37" size={24} />
-            <Text style={styles.cardVal}>{stats.serenatasMes}</Text>
-            <Text style={styles.cardLab}>Completadas</Text>
-          </View>
-        </View>
-
-        <Text style={styles.sectionTitle}>Distribución de Ingresos</Text>
-        <View style={styles.chartPlaceholder}>
-           <Text style={styles.chartText}>Gráfico de rendimiento próximamente</Text>
-           <View style={styles.chartBar} />
-           <View style={[styles.chartBar, {width: '80%', opacity: 0.6}]} />
-           <View style={[styles.chartBar, {width: '40%', opacity: 0.3}]} />
-        </View>
-      </ScrollView>
+      </ImageBackground>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
-  header: { padding: 20, backgroundColor: '#111' },
-  headerTitle: { color: '#FFF', fontSize: 24, fontWeight: 'bold' },
-  scrollContent: { padding: 20 },
-  summaryCard: { backgroundColor: '#1A1A1A', padding: 25, borderRadius: 20, marginBottom: 20, borderBottomWidth: 4, borderBottomColor: '#D4AF37' },
-  summaryLabel: { color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', fontSize: 12, letterSpacing: 1 },
-  summaryValue: { color: '#FFF', fontSize: 36, fontWeight: 'bold', marginVertical: 10 },
-  trend: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  trendText: { color: '#25D366', fontSize: 12, fontWeight: 'bold' },
-  grid: { flexDirection: 'row', gap: 15, marginBottom: 30 },
-  smallCard: { flex: 1, backgroundColor: '#1A1A1A', padding: 20, borderRadius: 20, alignItems: 'center' },
-  cardVal: { color: '#FFF', fontSize: 20, fontWeight: 'bold', marginTop: 10 },
-  cardLab: { color: 'rgba(255,255,255,0.4)', fontSize: 10, textTransform: 'uppercase' },
-  sectionTitle: { color: '#D4AF37', fontSize: 14, fontWeight: 'bold', marginBottom: 15, textTransform: 'uppercase', letterSpacing: 1 },
-  chartPlaceholder: { backgroundColor: '#1A1A1A', padding: 30, borderRadius: 20, alignItems: 'center' },
-  chartText: { color: 'rgba(255,255,255,0.2)', fontSize: 12, marginBottom: 20 },
-  chartBar: { height: 10, backgroundColor: '#D4AF37', width: '100%', borderRadius: 5, marginBottom: 10 }
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)' },
+  header: { padding: 25, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
+  title: { color: '#FFF', fontSize: 24, fontWeight: 'bold' },
+  subtitle: { color: '#D4AF37', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 2 },
+  content: { padding: 25 },
+  statCard: { backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 20, padding: 25, marginBottom: 20, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  row: { flexDirection: 'row', marginBottom: 20 },
+  statLabel: { color: '#666', fontSize: 10, fontWeight: 'bold' },
+  statValue: { color: '#FFF', fontSize: 24, fontWeight: 'bold', marginTop: 5 },
+  downloadBtn: { backgroundColor: '#D4AF37', padding: 20, borderRadius: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 15, marginTop: 20 },
+  downloadText: { color: '#000', fontWeight: 'bold' },
+  infoFooter: { color: '#444', textAlign: 'center', marginTop: 40, fontSize: 11, fontStyle: 'italic' }
 });

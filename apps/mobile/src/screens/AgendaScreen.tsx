@@ -8,7 +8,8 @@ import {
 import { 
   Plus, Music, X, Calendar as CalendarIcon, MapPin, 
   DollarSign, User, Check, Trash2, ListMusic, 
-  Search, ChevronDown, ChevronRight, Clock, Filter, Star
+  Search, ChevronDown, ChevronRight, Clock, Filter, Star,
+  RotateCcw
 } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { supabase } from '../lib/supabase';
@@ -43,21 +44,25 @@ const SongPickerModal = ({ visible, canciones, onClose, onToggle }: any) => {
   }, [search]);
   return (
     <Modal visible={visible} animationType="slide" transparent={true}>
-      <View style={styles.pickerOverlay}><View style={styles.pickerSheet}>
-        <View style={styles.pickerHeader}>
-            <View><Text style={styles.pickerTitle}>Repertorio</Text><Text style={styles.pickerSubtitle}>{canciones.length} elegidas</Text></View>
-            <TouchableOpacity style={styles.pickerDoneBtn} onPress={onClose}><Text style={styles.pickerDoneText}>Listo</Text></TouchableOpacity>
+       <View style={styles.pickerOverlay}>
+        <ImageBackground source={require('../../assets/fondo_app.jpg')} style={{ flex: 1 }} resizeMode="cover">
+        <View style={[styles.bgOverlay, { borderTopLeftRadius: 30, borderTopRightRadius: 30 }]}>
+            <View style={styles.pickerHeader}>
+                <View><Text style={styles.pickerTitle}>Repertorio</Text><Text style={styles.pickerSubtitle}>{canciones.length} elegidas</Text></View>
+                <TouchableOpacity style={styles.pickerDoneBtn} onPress={onClose}><Text style={styles.pickerDoneText}>Listo</Text></TouchableOpacity>
+            </View>
+            <TextInput style={styles.pickerSearch} placeholder="Buscar canción..." placeholderTextColor="#666" value={search} onChangeText={setSearch} />
+            <ScrollView style={{ flex: 1, padding: 20 }}>
+                {filteredSongs.map(s => (
+                    <TouchableOpacity key={s} style={[styles.songItem, canciones.includes(s) && styles.songActive]} onPress={() => onToggle(s)}>
+                        <Text style={[styles.songText, canciones.includes(s) && styles.whiteText]}>{s}</Text>
+                        {canciones.includes(s) && <Check size={16} color="#000" />}
+                    </TouchableOpacity>
+                ))}
+            </ScrollView>
         </View>
-        <TextInput style={styles.pickerSearch} placeholder="Buscar..." placeholderTextColor="#666" value={search} onChangeText={setSearch} />
-        <ScrollView style={{ flex: 1, padding: 20 }}>
-            {filteredSongs.map(s => (
-                <TouchableOpacity key={s} style={[styles.songItem, canciones.includes(s) && styles.songActive]} onPress={() => onToggle(s)}>
-                    <Text style={[styles.songText, canciones.includes(s) && styles.whiteText]}>{s}</Text>
-                    {canciones.includes(s) && <Check size={16} color="#000" />}
-                </TouchableOpacity>
-            ))}
-        </ScrollView>
-      </View></View>
+        </ImageBackground>
+      </View>
     </Modal>
   );
 };
@@ -68,20 +73,24 @@ const ComunaPickerModal = ({ visible, onSelect, onClose }: any) => {
     const filtered = COMUNAS.filter(c => c.toLowerCase().includes(query.toLowerCase()));
     return (
         <Modal visible={visible} animationType="fade" transparent={true}>
-            <View style={styles.pickerOverlay}><View style={styles.pickerSheet}>
-                <View style={styles.pickerHeader}>
-                    <Text style={styles.pickerTitle}>Seleccionar Comuna</Text>
-                    <TouchableOpacity onPress={onClose}><X size={24} color="#666" /></TouchableOpacity>
+            <View style={styles.pickerOverlay}>
+                <ImageBackground source={require('../../assets/fondo_app.jpg')} style={{ flex: 1 }} resizeMode="cover">
+                <View style={[styles.bgOverlay, { borderTopLeftRadius: 30, borderTopRightRadius: 30 }]}>
+                    <View style={styles.pickerHeader}>
+                        <Text style={styles.pickerTitle}>Seleccionar Comuna</Text>
+                        <TouchableOpacity onPress={onClose}><X size={24} color="#666" /></TouchableOpacity>
+                    </View>
+                    <TextInput style={styles.pickerSearch} placeholder="Filtrar comuna..." placeholderTextColor="#666" value={query} onChangeText={setQuery} />
+                    <ScrollView style={{ flex: 1, padding: 15 }}>
+                        {filtered.map(c => (
+                            <TouchableOpacity key={c} style={styles.comunaItem} onPress={() => { onSelect(c); onClose(); }}>
+                                <Text style={{ color: '#FFF' }}>{c}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
                 </View>
-                <TextInput style={styles.pickerSearch} placeholder="Filtrar comuna..." placeholderTextColor="#666" value={query} onChangeText={setQuery} />
-                <ScrollView style={{ flex: 1, padding: 15 }}>
-                    {filtered.map(c => (
-                        <TouchableOpacity key={c} style={styles.comunaItem} onPress={() => { onSelect(c); onClose(); }}>
-                            <Text style={{ color: '#FFF' }}>{c}</Text>
-                        </TouchableOpacity>
-                    ))}
-                </ScrollView>
-            </View></View>
+                </ImageBackground>
+            </View>
         </Modal>
     );
 };
@@ -117,7 +126,6 @@ export default function AgendaScreen() {
     else if (tipo === 'full') setPrecio('40000');
   }, [tipo]);
 
-  // Predicción de comuna al escribir dirección
   useEffect(() => {
     if (direccion.length > 5) {
         const predict = predecirComuna(direccion);
@@ -142,6 +150,7 @@ export default function AgendaScreen() {
       if (editingId) await supabase.from('serenatas').update(p).eq('id', editingId);
       else await supabase.from('serenatas').insert([{ ...p, estado: 'pendiente' }]);
       setShowModal(false); setEditingId(null); resetForm(); fetchData();
+      // El calendario se actualizará automáticamente si está en modo observación de Supabase o al refrescar
     } catch (e: any) { Alert.alert('Error', e.message); }
   };
 
@@ -151,12 +160,27 @@ export default function AgendaScreen() {
     setEditingId(s.id); setNombreCliente(s.nombre_cliente || ''); setTelefono(s.telefono || ''); setFestejada(s.nombre_festejada); setMotivo(s.motivo || ''); setFecha(s.fecha); setHora(s.hora || ''); setDireccion(s.direccion || ''); setComuna(s.comuna || ''); setPrecio((s.precio_total || 0).toString()); setTipo(s.tipo || 'express'); setCanciones(s.canciones || []); setShowModal(true);
   };
 
+  const filteredSerenatas = useMemo(() => {
+    let result = [...serenatas];
+    if (searchQuery.trim()) {
+      result = result.filter((s: any) => 
+        s.nombre_festejada?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        s.nombre_cliente?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        s.comuna?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (filterMode === 'hoy') result = result.filter((s: any) => s.fecha === todayStr);
+    else if (filterMode === 'pendientes') result = result.filter((s: any) => s.estado !== 'completada');
+    return result;
+  }, [serenatas, searchQuery, filterMode]);
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
       <ImageBackground source={require('../../assets/fondo_app.jpg')} style={{ flex: 1 }} resizeMode="cover">
       <View style={styles.bgOverlay}>
-        <View style={styles.header}><Text style={styles.headerTitle}>Agenda</Text><Text style={styles.headerSubtitle}>v4.5 PRO</Text></View>
+        <View style={styles.header}><Text style={styles.headerTitle}>Agenda</Text><Text style={styles.headerSubtitle}>v5.0 ELITE</Text></View>
         <View style={styles.searchBarWrapper}><View style={styles.searchBar}><Search size={18} color="#666" /><TextInput style={styles.searchBarInput} placeholder="Buscar..." placeholderTextColor="#444" value={searchQuery} onChangeText={setSearchQuery} /></View></View>
         <ScrollView contentContainerStyle={styles.scrollContent} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} tintColor="#D4AF37" />}>
           {filteredSerenatas.map((s: any) => <SerenataCard key={s.id} serenata={s} onUpdate={fetchData} onEdit={() => handleEdit(s)} />)}
@@ -166,40 +190,52 @@ export default function AgendaScreen() {
       </View></ImageBackground>
 
       <Modal visible={showModal} animationType="slide" transparent={true}>
-        <View style={styles.modalOverlay}><KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, justifyContent: 'flex-end' }}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}><Text style={styles.modalTitle}>AGENDAR SERENATA</Text><TouchableOpacity onPress={() => setShowModal(false)}><X color="#666" size={28} /></TouchableOpacity></View>
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={styles.sectionTitle}>Identidad</Text>
-              <TextInput style={styles.input} placeholder="Cliente" placeholderTextColor="#555" value={nombreCliente} onChangeText={setNombreCliente} />
-              <TextInput style={styles.input} placeholder="Festejada" placeholderTextColor="#555" value={festejada} onChangeText={setFestejada} />
-              
-              <Text style={styles.sectionTitle}>Cita & Comuna</Text>
-              <View style={styles.row}>
-                <TouchableOpacity style={[styles.input, { flex: 1, marginRight: 10 }]} onPress={() => setShowDatePicker(true)}><Text style={{ color: '#FFF' }}>{fecha ? formatToDMY(fecha) : 'Fecha'}</Text></TouchableOpacity>
-                <TouchableOpacity style={[styles.input, { flex: 1 }]} onPress={() => setShowTimePicker(true)}><Text style={{ color: '#FFF' }}>{hora || 'Hora'}</Text></TouchableOpacity>
-              </View>
-              {showDatePicker && <DateTimePicker value={new Date()} mode="date" display="default" onChange={(e, d) => { setShowDatePicker(false); if(d) setFecha(d.toISOString().split('T')[0]); }} />}
-              {showTimePicker && <DateTimePicker value={new Date()} mode="time" display="default" onChange={(e, t) => { setShowTimePicker(false); if(t) setHora(`${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`); }} />}
-              
-              <TextInput style={styles.input} placeholder="Dirección" placeholderTextColor="#555" value={direccion} onChangeText={setDireccion} />
-              <TouchableOpacity style={styles.input} onPress={() => setShowComunaPicker(true)}>
-                  <Text style={{ color: comuna ? '#FFF' : '#555' }}>{comuna || 'Seleccionar Comuna (Biobío/Araucanía)'}</Text>
-              </TouchableOpacity>
+        <View style={styles.modalOverlay}>
+            <ImageBackground source={require('../../assets/fondo_app.jpg')} style={{ flex: 1 }} resizeMode="cover">
+            <View style={[styles.bgOverlay, { flex: 1 }]}>
+            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+                <View style={[styles.modalContent, { backgroundColor: 'transparent' }]}>
+                    <View style={styles.modalHeader}><Text style={styles.modalTitle}>{editingId ? 'EDITAR' : 'NUEVA'} SERENATA</Text><TouchableOpacity onPress={() => setShowModal(false)}><X color="#D4AF37" size={28} /></TouchableOpacity></View>
+                    <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                        <Text style={styles.sectionTitle}>Identidad</Text>
+                        <TextInput style={styles.input} placeholder="Cliente" placeholderTextColor="#555" value={nombreCliente} onChangeText={setNombreCliente} />
+                        <TextInput style={styles.input} placeholder="Festejada" placeholderTextColor="#555" value={festejada} onChangeText={setFestejada} />
+                        
+                        <Text style={styles.sectionTitle}>Cita & Comuna</Text>
+                        <View style={styles.row}>
+                            <TouchableOpacity style={[styles.input, { flex: 1, marginRight: 10 }]} onPress={() => setShowDatePicker(true)}><Text style={{ color: '#FFF' }}>{fecha ? formatToDMY(fecha) : 'Fecha'}</Text></TouchableOpacity>
+                            <TouchableOpacity style={[styles.input, { flex: 1 }]} onPress={() => setShowTimePicker(true)}><Text style={{ color: '#FFF' }}>{hora || 'Hora'}</Text></TouchableOpacity>
+                        </View>
+                        {showDatePicker && <DateTimePicker value={new Date()} mode="date" display="default" onChange={(e, d) => { setShowDatePicker(false); if(d) setFecha(d.toISOString().split('T')[0]); }} />}
+                        {showTimePicker && <DateTimePicker value={new Date()} mode="time" display="default" onChange={(e, t) => { setShowTimePicker(false); if(t) setHora(`${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`); }} />}
+                        
+                        <TextInput style={styles.input} placeholder="Dirección" placeholderTextColor="#555" value={direccion} onChangeText={setDireccion} />
+                        <TouchableOpacity style={styles.input} onPress={() => setShowComunaPicker(true)}>
+                            <Text style={{ color: comuna ? '#FFF' : '#555' }}>{comuna || 'Seleccionar Comuna'}</Text>
+                        </TouchableOpacity>
 
-              <Text style={styles.sectionTitle}>Servicio & Precio</Text>
-              <View style={styles.typeRow}>
-                {['express', 'full', 'personalizado'].map(t => (
-                  <TouchableOpacity key={t} style={[styles.typeBtn, tipo === t && styles.typeBtnActive]} onPress={() => setTipo(t)}><Text style={[styles.typeBtnText, tipo === t && styles.typeBtnTextActive]}>{t.toUpperCase()}</Text></TouchableOpacity>
-                ))}
-              </View>
-              <TextInput style={styles.input} value={precio} onChangeText={setPrecio} keyboardType="numeric" editable={tipo === 'personalizado'} />
+                        <Text style={styles.sectionTitle}>Servicio & Precio</Text>
+                        <View style={styles.typeRow}>
+                            {['express', 'full', 'personalizado'].map(t => (
+                            <TouchableOpacity key={t} style={[styles.typeBtn, tipo === t && styles.typeBtnActive]} onPress={() => setTipo(t)}><Text style={[styles.typeBtnText, tipo === t && styles.typeBtnTextActive]}>{t.toUpperCase()}</Text></TouchableOpacity>
+                            ))}
+                        </View>
+                        <TextInput style={styles.input} value={precio} onChangeText={setPrecio} keyboardType="numeric" editable={tipo === 'personalizado'} />
 
-              <TouchableOpacity style={styles.submitBtn} onPress={handleCreateOrUpdate}><Text style={styles.submitBtnText}>CONFIRMAR</Text></TouchableOpacity>
-              <View style={{ height: 100 }} />
-            </ScrollView>
-          </View>
-        </KeyboardAvoidingView></View>
+                        <TouchableOpacity style={styles.submitBtn} onPress={handleCreateOrUpdate}><Text style={styles.submitBtnText}>CONFIRMAR</Text></TouchableOpacity>
+                        
+                        {editingId && (
+                            <TouchableOpacity style={[styles.submitBtn, { backgroundColor: 'transparent', borderWidth: 1, borderColor: '#e74c3c', marginTop: 15 }]} onPress={() => {
+                                Alert.alert('Eliminar', '¿Seguro?', [{text:'No'},{text:'Sí', onPress: async()=> {await supabase.from('serenatas').delete().eq('id', editingId); setShowModal(false); fetchData();}}]);
+                            }}><Text style={{ color: '#e74c3c' }}>ELIMINAR SERENATA</Text></TouchableOpacity>
+                        )}
+                        <View style={{ height: 100 }} />
+                    </ScrollView>
+                </View>
+            </KeyboardAvoidingView>
+            </View>
+            </ImageBackground>
+        </View>
       </Modal>
 
       <SongPickerModal visible={showSongPicker} canciones={canciones} onClose={() => setShowSongPicker(false)} onToggle={(s: string) => canciones.includes(s) ? setCanciones(canciones.filter(c => c !== s)) : setCanciones([...canciones, s])} />
@@ -219,26 +255,27 @@ const styles = StyleSheet.create({
   searchBarInput: { flex: 1, color: '#FFF', marginLeft: 10 },
   scrollContent: { padding: 20 },
   fab: { position: 'absolute', bottom: 30, right: 25, width: 65, height: 65, borderRadius: 32, backgroundColor: '#D4AF37', justifyContent: 'center', alignItems: 'center' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.92)' },
-  modalContent: { backgroundColor: '#0D0D0D', borderTopLeftRadius: 35, borderTopRightRadius: 35, height: '90%', padding: 25 },
+  modalOverlay: { flex: 1, backgroundColor: '#000' },
+  modalContent: { flex: 1, padding: 25 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 },
   modalTitle: { color: '#D4AF37', fontSize: 20, fontWeight: 'bold' },
   sectionTitle: { color: '#444', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase', marginBottom: 15, marginTop: 10 },
-  input: { backgroundColor: '#161616', borderRadius: 15, padding: 16, color: '#FFF', marginBottom: 12, borderWidth: 1, borderColor: '#222' },
+  input: { backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 15, padding: 16, color: '#FFF', marginBottom: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
   row: { flexDirection: 'row' },
   typeRow: { flexDirection: 'row', gap: 8, marginBottom: 15 },
-  typeBtn: { flex: 1, paddingVertical: 12, borderRadius: 12, backgroundColor: '#161616', alignItems: 'center', borderWidth: 1, borderColor: '#333' },
+  typeBtn: { flex: 1, paddingVertical: 12, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', borderWidth: 1, borderColor: '#333' },
   typeBtnActive: { backgroundColor: '#D4AF37', borderColor: '#D4AF37' },
   typeBtnText: { color: '#666', fontSize: 9, fontWeight: 'bold' },
   typeBtnTextActive: { color: '#000' },
   submitBtn: { backgroundColor: '#D4AF37', padding: 20, borderRadius: 18, alignItems: 'center', marginTop: 10 },
   submitBtnText: { color: '#000', fontWeight: 'bold' },
-  pickerOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'flex-end' },
-  pickerSheet: { backgroundColor: '#0D0D0D', borderTopLeftRadius: 30, borderTopRightRadius: 30, height: '85%' },
+  pickerOverlay: { flex: 1, backgroundColor: '#000', justifyContent: 'flex-end' },
+  pickerSheet: { flex: 1 },
   pickerHeader: { padding: 25, flexDirection: 'row', justifyContent: 'space-between' },
   pickerTitle: { color: '#D4AF37', fontSize: 22, fontWeight: 'bold' },
-  pickerSearch: { backgroundColor: '#111', margin: 20, padding: 15, borderRadius: 15, color: '#FFF' },
-  songItem: { flexDirection: 'row', justifyContent: 'space-between', padding: 15, backgroundColor: '#111', borderRadius: 12, marginBottom: 8 },
+  pickerSubtitle: { color: '#666', fontSize: 11 },
+  pickerSearch: { backgroundColor: 'rgba(255,255,255,0.05)', margin: 20, padding: 15, borderRadius: 15, color: '#FFF' },
+  songItem: { flexDirection: 'row', justifyContent: 'space-between', padding: 15, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 12, marginBottom: 8 },
   songActive: { backgroundColor: '#D4AF37' },
   songText: { color: '#666' },
   whiteText: { color: '#000', fontWeight: 'bold' },
