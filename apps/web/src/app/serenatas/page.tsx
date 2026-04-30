@@ -7,7 +7,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Plus, Search, X, Music, CheckCircle, ChevronDown, MapPin, FileText, Send, Phone, Trash2, Clock, MessageCircle, RotateCcw, Loader2, Pencil, Wallet, Users, ChevronRight, Star } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import jsPDF from 'jspdf';
-import { COMUNAS, predecirComuna } from '../lib/comunas';
+import { COMUNAS, predecirComuna } from '../../lib/comunas';
 
 const LISTADO_CANCIONES = [
   "Mil puñados de oro", "Jalisco no te rajes", "Un millón de primaveras",
