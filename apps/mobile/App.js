@@ -1,58 +1,58 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, Platform, PanResponder } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
-import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import * as NavigationBar from 'expo-navigation-bar';
-import { Calendar as CalendarIcon, List, BarChart3, CheckCircle2 } from 'lucide-react-native';
+import { Calendar as CalendarIcon, List, CheckCircle2 } from 'lucide-react-native';
+
+// SOLUCIÓN CRÍTICA: Desactiva el motor de pantallas nativo que causa el cierre inmediato en Android
+import { enableScreens } from 'react-native-screens';
+enableScreens(false);
 
 // Screens
 import AgendaScreen from './src/screens/AgendaScreen';
 import CalendarioScreen from './src/screens/CalendarioScreen';
-import ReportesScreen from './src/screens/ReportesScreen';
 import FinalizadasScreen from './src/screens/FinalizadasScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import SplashScreen from './src/screens/SplashScreen';
 import { supabase } from './src/lib/supabase';
 
-const Tab = createMaterialTopTabNavigator();
+const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
-const INACTIVITY_LIMIT = 3 * 60 * 1000; // 3 minutos
+const INACTIVITY_LIMIT = 5 * 60 * 1000;
 
 function MainTabs() {
   return (
     <Tab.Navigator
-      tabBarPosition="bottom"
       screenOptions={({ route }) => ({
-        tabBarIcon: ({ color }) => {
-          if (route.name === 'Agenda') return <List color={color} size={20} />;
-          if (route.name === 'Finalizadas') return <CheckCircle2 color={color} size={20} />;
-          if (route.name === 'Calendario') return <CalendarIcon color={color} size={20} />;
-          if (route.name === 'Reportes') return <BarChart3 color={color} size={20} />;
-        },
+        headerShown: false,
         tabBarActiveTintColor: '#D4AF37',
-        tabBarInactiveTintColor: 'gray',
-        tabBarShowIcon: true,
-        tabBarLabelStyle: { fontSize: 8, fontWeight: 'bold' },
-        tabBarActiveLabelStyle: { color: '#D4AF37' },
-        tabBarIndicatorStyle: { backgroundColor: '#D4AF37', top: 0 },
+        tabBarInactiveTintColor: '#666',
         tabBarStyle: {
-          backgroundColor: '#0A0A0A',
-          borderTopColor: '#222',
-          paddingBottom: Platform.OS === 'android' ? 25 : 45,
-          height: Platform.OS === 'android' ? 75 : 105,
-          borderTopWidth: 1,
-          elevation: 0,
-          shadowOpacity: 0
+          backgroundColor: '#000',
+          borderTopColor: '#1A1A1A',
+          height: 60,
         },
       })}
     >
-      <Tab.Screen name="Agenda" component={AgendaScreen} />
-      <Tab.Screen name="Finalizadas" component={FinalizadasScreen} options={{ title: 'Finalizadas' }} />
-      <Tab.Screen name="Calendario" component={CalendarioScreen} options={{ title: 'Calendario' }} />
-      <Tab.Screen name="Reportes" component={ReportesScreen} />
+      <Tab.Screen 
+        name="Agenda" 
+        component={AgendaScreen} 
+        options={{ tabBarIcon: ({ color }) => <List color={color} size={24} /> }}
+      />
+      <Tab.Screen 
+        name="Finalizadas" 
+        component={FinalizadasScreen} 
+        options={{ tabBarIcon: ({ color }) => <CheckCircle2 color={color} size={24} /> }}
+      />
+      <Tab.Screen 
+        name="Calendario" 
+        component={CalendarioScreen} 
+        options={{ tabBarIcon: ({ color }) => <CalendarIcon color={color} size={24} /> }}
+      />
     </Tab.Navigator>
   );
 }
@@ -66,30 +66,20 @@ export default function App() {
     try {
       await supabase.auth.signOut();
       setSession(null);
-    } catch (e) {
-      console.error("Auto-logout error:", e);
-    }
+    } catch (e) { console.error(e); }
   };
 
   const resetTimer = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
     if (session) {
-      timerRef.current = setTimeout(() => {
-        handleLogout();
-      }, INACTIVITY_LIMIT);
+      timerRef.current = setTimeout(handleLogout, INACTIVITY_LIMIT);
     }
   };
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponderCapture: () => {
-        resetTimer();
-        return false;
-      },
-      onMoveShouldSetPanResponderCapture: () => {
-        resetTimer();
-        return false;
-      },
+      onStartShouldSetPanResponderCapture: () => { resetTimer(); return false; },
+      onMoveShouldSetPanResponderCapture: () => { resetTimer(); return false; },
     })
   ).current;
 
@@ -99,32 +89,21 @@ export default function App() {
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       resetTimer();
     });
 
-    // Modo Inmersivo para Android
     if (Platform.OS === 'android') {
       const setImmersive = async () => {
         try {
-          await NavigationBar.setVisibilityAsync('hidden');
-          await NavigationBar.setBehaviorAsync('inset-touch');
-          await NavigationBar.setBackgroundColorAsync('#000000');
+          await NavigationBar.setVisibilityAsync('hidden').catch(() => {});
+          await NavigationBar.setBackgroundColorAsync('#000000').catch(() => {});
         } catch (e) {}
       };
       setImmersive();
     }
-
-    return () => {
-      subscription.unsubscribe();
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
   }, []);
-
-  useEffect(() => {
-    resetTimer();
-  }, [session]);
 
   if (loading) {
     return <SplashScreen onFinish={() => setLoading(false)} />;

@@ -29,9 +29,15 @@
     },
     "extra": {
       "eas": {
-        "projectId": "bc6ddb6e-e9ab-4287-b4c6-9b8a698e626b"
+        "projectId": "e00f3ea5-d8a0-41d0-aac8-37430f884ac3"
       }
     },
-    "owner": "prubilarm"
+    "owner": "rubilarp57",
+    "plugins": [
+      "expo-dev-client",
+      "expo-secure-store",
+      "expo-asset",
+      "@react-native-community/datetimepicker"
+    ]
   }
 }

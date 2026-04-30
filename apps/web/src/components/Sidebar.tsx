@@ -13,7 +13,8 @@ import {
   FileText,
   LogOut,
   Menu,
-  X
+  X,
+  CheckCircle
 } from 'lucide-react';
 
 const menuItems = [
@@ -23,7 +24,6 @@ const menuItems = [
   { icon: CheckCircle,     label: 'Finalizadas', href: '/serenatas?estado=finalizada' },
   { icon: CreditCard,      label: 'Caja',     href: '/pagos' },
   { icon: Users,           label: 'Clientes',  href: '/clientes' },
-  { icon: FileText,        label: 'Reportes',  href: '/reportes' },
 ];
 
 const Sidebar = () => {

@@ -5,7 +5,10 @@ export type EstadoSerenata =
   | 'en camino' 
   | 'realizada' 
   | 'pagada' 
-  | 'cancelada';
+  | 'cancelada'
+  | 'pendiente'
+  | 'finalizada'
+  | 'completada';
 
 export type TipoSerenata = 'express' | 'full';
 

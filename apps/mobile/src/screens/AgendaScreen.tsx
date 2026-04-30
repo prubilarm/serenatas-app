@@ -9,8 +9,10 @@ import {
   Plus, Music, X, Calendar as CalendarIcon, MapPin, 
   DollarSign, User, Check, Trash2, ListMusic, 
   Search, ChevronDown, ChevronRight, Clock, Filter, Star,
-  RotateCcw
+  RotateCcw, LogOut, Settings as SettingsIcon, ShieldCheck, Fingerprint
 } from 'lucide-react-native';
+import * as LocalAuthentication from 'expo-local-authentication';
+import * as SecureStore from 'expo-secure-store';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { supabase } from '../lib/supabase';
 import { COMUNAS, predecirComuna } from '../lib/comunas';
@@ -86,6 +88,13 @@ const SongPickerModal = ({ visible, canciones, onClose, onToggle, limit }: any) 
             <TextInput style={styles.pickerSearch} placeholder="Buscar en lista..." placeholderTextColor="#666" value={search} onChangeText={setSearch} />
             <ScrollView style={{ flex: 1, paddingHorizontal: 20 }}>
                 {filteredSongs.map(s => (
+                    <TouchableOpacity 
+                      key={s} 
+                      style={[styles.songItem, canciones.includes(s) && styles.songActive]} 
+                      onPress={() => handleSelect(s)}
+                    >
+                        <Text style={[styles.songText, canciones.includes(s) && styles.whiteText]}>{s}</Text>
+                        {canciones.includes(s) && <Check size={16} color="#000" />}
                     </TouchableOpacity>
                 ))}
             </ScrollView>
@@ -136,6 +145,9 @@ export default function AgendaScreen() {
   const [filterMode, setFilterMode] = useState('pendientes');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [biometricsEnabled, setBiometricsEnabled] = useState(false);
+  const [biometricsSupported, setBiometricsSupported] = useState(false);
 
   // Form
   const [nombreCliente, setNombreCliente] = useState('');
@@ -170,7 +182,53 @@ export default function AgendaScreen() {
     finally { setLoading(false); setRefreshing(false); }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { 
+    fetchData(); 
+    checkBiometricsSupport();
+    loadSettings();
+    
+    // Suscripción en tiempo real...
+    const subscription = supabase
+      .channel('serenatas_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'serenatas' }, () => {
+        fetchData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, []);
+
+  const checkBiometricsSupport = async () => {
+    const compatible = await LocalAuthentication.hasHardwareAsync();
+    const enrolled = await LocalAuthentication.isEnrolledAsync();
+    setBiometricsSupported(compatible && enrolled);
+  };
+
+  const loadSettings = async () => {
+    const enabled = await SecureStore.getItemAsync('biometrics_enabled');
+    setBiometricsEnabled(enabled === 'true');
+  };
+
+  const toggleBiometrics = async () => {
+    const newValue = !biometricsEnabled;
+    setBiometricsEnabled(newValue);
+    await SecureStore.setItemAsync('biometrics_enabled', newValue ? 'true' : 'false');
+    if (!newValue) {
+      // Si desactiva, opcionalmente podrías borrar credenciales pero mejor solo deshabilitar la opción
+      await SecureStore.deleteItemAsync('user_email');
+      await SecureStore.deleteItemAsync('user_password');
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (e: any) {
+      Alert.alert('Error', e.message);
+    }
+  };
 
   const handleCreateOrUpdate = async () => {
     if (!nombreCliente || !festejada || !fecha) { Alert.alert('Faltan datos', 'Completa los campos.'); return; }
@@ -198,7 +256,8 @@ export default function AgendaScreen() {
         s.comuna?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
-    const todayStr = new Date().toISOString().split('T')[0];
+    const d = new Date();
+    const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     if (filterMode === 'hoy') result = result.filter((s: any) => s.fecha === todayStr);
     else if (filterMode === 'pendientes') result = result.filter((s: any) => s.estado !== 'completada');
     return result;
@@ -210,6 +269,11 @@ export default function AgendaScreen() {
       <ImageBackground source={require('../../assets/fondo_app.jpg')} style={{ flex: 1 }} resizeMode="cover">
       <View style={styles.bgOverlay}>
         <View style={styles.header}>
+          <View style={{ position: 'absolute', left: 25, top: Platform.OS === 'ios' ? 55 : 45 }}>
+            <TouchableOpacity onPress={() => setShowSettingsModal(true)} style={styles.settingsBtn}>
+              <SettingsIcon color="#D4AF37" size={20} />
+            </TouchableOpacity>
+          </View>
           <Text style={styles.headerTitle}>AGENDA</Text>
           <Text style={styles.headerSubtitle}>MARIACHI AVENTURERO</Text>
         </View>
@@ -225,13 +289,62 @@ export default function AgendaScreen() {
         <TouchableOpacity style={styles.fab} onPress={() => { resetForm(); setShowModal(true); }}><Plus color="#000" size={32} /></TouchableOpacity>
       </View></ImageBackground>
 
+      <Modal visible={showSettingsModal} animationType="fade" transparent={true}>
+        <View style={styles.settingsOverlay}>
+            <ImageBackground source={require('../../assets/fondo_app.jpg')} style={{ flex: 1 }} resizeMode="cover">
+            <SafeAreaView style={[styles.bgOverlay, { flex: 1 }]}>
+                <View style={styles.settingsContent}>
+                    <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>CONFIGURACIÓN</Text>
+                        <TouchableOpacity onPress={() => setShowSettingsModal(false)} style={styles.closeBtn}>
+                            <X color="#D4AF37" size={28} />
+                        </TouchableOpacity>
+                    </View>
+
+                    <View style={styles.settingsGroup}>
+                        <Text style={styles.sectionTitle}>Seguridad & Acceso</Text>
+                        <View style={styles.settingItem}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                                <Fingerprint color="#D4AF37" size={24} />
+                                <View>
+                                    <Text style={styles.settingLabel}>Inicio con Huella</Text>
+                                    <Text style={styles.settingDesc}>{biometricsSupported ? 'Acceso rápido y seguro' : 'No disponible en este equipo'}</Text>
+                                </View>
+                            </View>
+                            <TouchableOpacity 
+                                style={[styles.toggleBtn, biometricsEnabled && styles.toggleBtnActive, !biometricsSupported && { opacity: 0.3 }]} 
+                                onPress={toggleBiometrics}
+                                disabled={!biometricsSupported}
+                            >
+                                <View style={[styles.toggleDot, biometricsEnabled && styles.toggleDotActive]} />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+
+                    <View style={{ flex: 1 }} />
+
+                    <TouchableOpacity style={styles.fullLogoutBtn} onPress={handleLogout}>
+                        <LogOut color="#FFF" size={20} />
+                        <Text style={styles.fullLogoutText}>CERRAR SESIÓN</Text>
+                    </TouchableOpacity>
+                </View>
+            </SafeAreaView>
+            </ImageBackground>
+        </View>
+      </Modal>
+
       <Modal visible={showModal} animationType="slide" transparent={true}>
         <View style={styles.modalOverlay}>
             <ImageBackground source={require('../../assets/fondo_app.jpg')} style={{ flex: 1 }} resizeMode="cover">
-            <View style={[styles.bgOverlay, { flex: 1 }]}>
+            <SafeAreaView style={[styles.bgOverlay, { flex: 1 }]}>
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
                 <View style={[styles.modalContent, { backgroundColor: 'transparent' }]}>
-                    <View style={styles.modalHeader}><Text style={styles.modalTitle}>{editingId ? 'EDITAR' : 'NUEVA'} SERENATA</Text><TouchableOpacity onPress={() => setShowModal(false)}><X color="#D4AF37" size={28} /></TouchableOpacity></View>
+                    <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>{editingId ? 'EDITAR' : 'NUEVA'} SERENATA</Text>
+                        <TouchableOpacity onPress={() => setShowModal(false)} style={styles.closeBtn}>
+                            <X color="#D4AF37" size={28} />
+                        </TouchableOpacity>
+                    </View>
                     <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
                         <Text style={styles.sectionTitle}>Identidad & Contacto</Text>
                         <TextInput style={styles.input} placeholder="Nombre del Cliente" placeholderTextColor="#555" value={nombreCliente} onChangeText={setNombreCliente} selectionColor="#D4AF37" />
@@ -250,7 +363,7 @@ export default function AgendaScreen() {
                                 <Text style={{ color: '#FFF' }}>{hora || 'Seleccionar Hora'}</Text>
                             </TouchableOpacity>
                         </View>
-                        {showDatePicker && <DateTimePicker value={new Date()} mode="date" display="default" onChange={(e, d) => { setShowDatePicker(false); if(d) setFecha(d.toISOString().split('T')[0]); }} />}
+                        {showDatePicker && <DateTimePicker value={new Date()} mode="date" display="default" onChange={(e, d) => { setShowDatePicker(false); if(d) { const localDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; setFecha(localDate); } }} />}
                         {showTimePicker && <DateTimePicker value={new Date()} mode="time" display="default" onChange={(e, t) => { setShowTimePicker(false); if(t) setHora(`${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`); }} />}
                         
                         <TextInput style={styles.input} placeholder="Dirección del Evento" placeholderTextColor="#555" value={direccion} onChangeText={setDireccion} selectionColor="#D4AF37" />
@@ -276,18 +389,26 @@ export default function AgendaScreen() {
                         </View>
                         <TextInput style={styles.input} value={precio} onChangeText={setPrecio} keyboardType="numeric" editable={tipo === 'personalizado'} selectionColor="#D4AF37" />
 
-                        <TouchableOpacity style={styles.submitBtn} onPress={handleCreateOrUpdate}><Text style={styles.submitBtnText}>CONFIRMAR SERENATA</Text></TouchableOpacity>
+                        <View style={{ height: 30 }} />
+                    </ScrollView>
+
+                    {/* Botones de acción fijos fuera del ScrollView para evitar desapariciones */}
+                    <View style={styles.modalFooter}>
+                        <TouchableOpacity style={styles.submitBtn} onPress={handleCreateOrUpdate}>
+                            <Text style={styles.submitBtnText}>CONFIRMAR SERENATA</Text>
+                        </TouchableOpacity>
                         
                         {editingId && (
-                            <TouchableOpacity style={[styles.submitBtn, { backgroundColor: 'transparent', borderWidth: 1, borderColor: '#e74c3c', marginTop: 15 }]} onPress={() => {
+                            <TouchableOpacity style={styles.btnDelete} onPress={() => {
                                 Alert.alert('Eliminar', '¿Seguro?', [{text:'No'},{text:'Sí', onPress: async()=> {await supabase.from('serenatas').delete().eq('id', editingId); setShowModal(false); fetchData();}}]);
-                            }}><Text style={{ color: '#e74c3c', fontWeight: 'bold' }}>ELIMINAR SERENATA</Text></TouchableOpacity>
+                            }}>
+                                <Text style={styles.btnDeleteText}>ELIMINAR SERENATA</Text>
+                            </TouchableOpacity>
                         )}
-                        <View style={{ height: 120 }} />
-                    </ScrollView>
+                    </View>
                 </View>
             </KeyboardAvoidingView>
-            </View>
+            </SafeAreaView>
             </ImageBackground>
         </View>
       </Modal>
@@ -333,7 +454,31 @@ const styles = StyleSheet.create({
   fab: { position: 'absolute', bottom: 30, right: 25, width: 65, height: 65, borderRadius: 32, backgroundColor: '#D4AF37', justifyContent: 'center', alignItems: 'center' },
   modalOverlay: { flex: 1, backgroundColor: '#000' },
   modalContent: { flex: 1, padding: 25 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 },
+  submitBtn: { backgroundColor: '#D4AF37', padding: 20, borderRadius: 18, alignItems: 'center' },
+  submitBtnText: { color: '#000', fontWeight: 'bold', letterSpacing: 1 },
+  modalFooter: { paddingVertical: 20, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' },
+  btnDelete: { backgroundColor: 'transparent', borderWidth: 1, borderColor: '#e74c3c', marginTop: 12, padding: 16, borderRadius: 18, alignItems: 'center' },
+  btnDeleteText: { color: '#e74c3c', fontWeight: 'bold', fontSize: 13 },
+  settingsBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(212,175,55,0.1)', justifyContent: 'center', alignItems: 'center' },
+  settingsOverlay: { flex: 1, backgroundColor: '#000' },
+  settingsContent: { flex: 1, padding: 25 },
+  settingsGroup: { backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 20, padding: 20, marginTop: 10 },
+  settingItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  settingLabel: { color: '#FFF', fontSize: 14, fontWeight: 'bold' },
+  settingDesc: { color: '#666', fontSize: 11, marginTop: 2 },
+  toggleBtn: { width: 50, height: 28, borderRadius: 15, backgroundColor: '#333', padding: 3, justifyContent: 'center' },
+  toggleBtnActive: { backgroundColor: '#D4AF37' },
+  toggleDot: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#666' },
+  toggleDotActive: { backgroundColor: '#000', alignSelf: 'flex-end' },
+  fullLogoutBtn: { flexDirection: 'row', backgroundColor: '#e74c3c', padding: 20, borderRadius: 18, alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 20 },
+  fullLogoutText: { color: '#FFF', fontWeight: 'bold', letterSpacing: 1 },
+  modalHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    marginBottom: 20,
+    marginTop: Platform.OS === 'ios' ? 15 : 5
+  },
   modalTitle: { color: '#D4AF37', fontSize: 20, fontWeight: 'bold' },
   sectionTitle: { color: '#444', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase', marginBottom: 15, marginTop: 10 },
   input: { backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 15, padding: 16, color: '#FFF', marginBottom: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
@@ -341,10 +486,9 @@ const styles = StyleSheet.create({
   typeRow: { flexDirection: 'row', gap: 8, marginBottom: 15 },
   typeBtn: { flex: 1, paddingVertical: 12, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', borderWidth: 1, borderColor: '#333' },
   typeBtnActive: { backgroundColor: '#D4AF37', borderColor: '#D4AF37' },
-  typeBtnText: { color: '#666', fontSize: 9, fontWeight: 'bold' },
+  typeBtnText: { color: '#666', fontSize: 10, fontWeight: 'bold' },
   typeBtnTextActive: { color: '#000' },
-  submitBtn: { backgroundColor: '#D4AF37', padding: 20, borderRadius: 18, alignItems: 'center', marginTop: 10 },
-  submitBtnText: { color: '#000', fontWeight: 'bold' },
+  closeBtn: { padding: 5 },
   pickerOverlay: { flex: 1, backgroundColor: '#000', justifyContent: 'flex-end' },
   pickerSheet: { flex: 1 },
   pickerHeader: { padding: 25, flexDirection: 'row', justifyContent: 'space-between' },

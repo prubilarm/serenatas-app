@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, View, Text, SafeAreaView, ActivityIndicator, ImageBackground, ScrollView, RefreshControl } from 'react-native';
+import { StyleSheet, View, Text, SafeAreaView, ActivityIndicator, ImageBackground, ScrollView, RefreshControl, Platform } from 'react-native';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../lib/supabase';
@@ -28,17 +28,23 @@ export default function CalendarioScreen() {
       setSerenatas(data);
       const marked: any = {};
       data.forEach((s: any) => {
-        const isCompleted = s.estado === 'completada';
-        marked[s.fecha] = { 
-          marked: true, 
-          dotColor: isCompleted ? '#2ecc71' : '#e74c3c',
-          selected: selectedDate === s.fecha,
-          selectedColor: '#D4AF37'
-        };
+        const isFin = s.estado === 'finalizada' || s.estado === 'completada' || s.estado === 'realizada';
+        const dotColor = isFin ? '#2ecc71' : '#f1c40f'; // Green or Yellow
+        
+        if (!marked[s.fecha]) {
+          marked[s.fecha] = { 
+            dots: [], 
+            selected: selectedDate === s.fecha,
+            selectedColor: '#D4AF37'
+          };
+        }
+        
+        if (marked[s.fecha].dots.length < 3) {
+          marked[s.fecha].dots.push({ key: s.id, color: dotColor });
+        }
       });
       setMarkedDates(marked);
       
-      // Si ya hay una fecha seleccionada, actualizar la lista filtrada
       if (selectedDate) {
         setFilteredSerenatas(data.filter((s: any) => s.fecha === selectedDate));
       }
@@ -62,9 +68,7 @@ export default function CalendarioScreen() {
     // Actualizar marcadores visuales
     const newMarked = { ...markedDates };
     Object.keys(newMarked).forEach(key => {
-      if (newMarked[key].marked) {
-          newMarked[key] = { ...newMarked[key], selected: key === day.dateString };
-      }
+      newMarked[key] = { ...newMarked[key], selected: key === day.dateString };
     });
     if (!newMarked[day.dateString]) {
         newMarked[day.dateString] = { selected: true, selectedColor: '#D4AF37' };
@@ -108,6 +112,7 @@ export default function CalendarioScreen() {
                   }}
                   onDayPress={handleDayPress}
                   markedDates={markedDates}
+                  markingType="multi-dot"
                 />
               </View>
 

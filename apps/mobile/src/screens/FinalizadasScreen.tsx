@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   StyleSheet, View, Text, ScrollView, RefreshControl, 
-  SafeAreaView, ImageBackground, StatusBar, TextInput 
+  SafeAreaView, ImageBackground, StatusBar, TextInput, Platform
 } from 'react-native';
 import { CheckCircle2, Music, Search, Calendar } from 'lucide-react-native';
 import { supabase } from '../lib/supabase';
@@ -25,7 +25,21 @@ export default function FinalizadasScreen() {
     finally { setLoading(false); setRefreshing(false); }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { 
+    fetchData(); 
+
+    // Suscripción en tiempo real para mantener sincronizado con Agenda
+    const subscription = supabase
+      .channel('finalizadas_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'serenatas' }, () => {
+        fetchData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, []);
 
   const filteredSerenatas = useMemo(() => {
     if (!searchQuery.trim()) return serenatas;

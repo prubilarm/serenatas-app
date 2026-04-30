@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { 
   Users, 
   Calendar, 
@@ -61,7 +62,8 @@ export default function DashboardPage() {
         
         if (Array.isArray(dataS)) {
           setSerenatas(dataS.slice(0, 5));
-          const hoy = new Date().toISOString().split('T')[0];
+          const d = new Date();
+          const hoy = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
           const hoyCount = dataS.filter((s: any) => s.fecha === hoy).length;
           
           setStats([
@@ -96,9 +98,9 @@ export default function DashboardPage() {
           <button className="px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/60 text-sm font-bold hover:bg-white/10 transition-all uppercase tracking-widest">
             Soporte
           </button>
-          <button className="btn-gold uppercase text-xs tracking-[0.2em]">
+          <Link href="/serenatas?nueva=true" className="btn-gold uppercase text-xs tracking-[0.2em] flex items-center justify-center">
             Nueva Orden
-          </button>
+          </Link>
         </div>
       </header>
 
@@ -118,10 +120,11 @@ export default function DashboardPage() {
               <Calendar className="text-[var(--accent-gold)]" size={20} />
               Próximas Serenatas
             </h2>
-            <button className="text-[var(--accent-gold)] font-bold text-[10px] uppercase tracking-widest hover:brightness-125 transition-all flex items-center gap-1">
+            <Link href="/serenatas" className="text-[var(--accent-gold)] font-bold text-[10px] uppercase tracking-widest hover:brightness-125 transition-all flex items-center gap-1">
               Ver todas <ChevronRight size={14} />
-            </button>
+            </Link>
           </div>
+
           
           <div className="p-4">
             {loading ? (

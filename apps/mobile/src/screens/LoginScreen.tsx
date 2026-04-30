@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   StyleSheet, 
   View, 
@@ -14,7 +14,9 @@ import {
   Easing
 } from 'react-native';
 import { supabase } from '../lib/supabase';
-import { Music, Lock, Mail } from 'lucide-react-native';
+import { Music, Lock, Mail, Fingerprint } from 'lucide-react-native';
+import * as LocalAuthentication from 'expo-local-authentication';
+import * as SecureStore from 'expo-secure-store';
 
 const FloatingNote = ({ delay }: { delay: number }) => {
   const moveAnim = useRef(new Animated.Value(0)).current;
@@ -33,8 +35,8 @@ const FloatingNote = ({ delay }: { delay: number }) => {
         Animated.delay(delay),
         Animated.parallel([
           Animated.timing(moveAnim, {
-            toValue: -150,
-            duration: 3000,
+            toValue: -700,
+            duration: 4000 + Math.random() * 2000,
             easing: Easing.out(Easing.quad),
             useNativeDriver: true,
           }),
@@ -65,9 +67,14 @@ const FloatingNote = ({ delay }: { delay: number }) => {
     outputRange: ['0deg', '45deg']
   });
 
+  const path = useMemo(() => ({
+    mid: (Math.random() - 0.5) * 150,
+    end: (Math.random() - 0.5) * 300
+  }), []);
+
   const translateX = rotateAnim.interpolate({
     inputRange: [0, 0.5, 1],
-    outputRange: [0, 20, -20]
+    outputRange: [0, path.mid, path.end]
   });
 
   return (
@@ -95,6 +102,51 @@ export default function LoginScreen({ onLogin }: any) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [biometricsAvailable, setBiometricsAvailable] = useState(false);
+  const [hasStoredCredentials, setHasStoredCredentials] = useState(false);
+
+  useEffect(() => {
+    checkBiometrics();
+  }, []);
+
+  const checkBiometrics = async () => {
+    const compatible = await LocalAuthentication.hasHardwareAsync();
+    const enrolled = await LocalAuthentication.isEnrolledAsync();
+    setBiometricsAvailable(compatible && enrolled);
+
+    const storedEmail = await SecureStore.getItemAsync('user_email');
+    if (storedEmail) setHasStoredCredentials(true);
+  };
+
+  const handleBiometricLogin = async () => {
+    try {
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Inicia sesión con tu huella',
+        fallbackLabel: 'Usar contraseña',
+      });
+
+      if (result.success) {
+        setLoading(true);
+        const storedEmail = await SecureStore.getItemAsync('user_email');
+        const storedPassword = await SecureStore.getItemAsync('user_password');
+
+        if (storedEmail && storedPassword) {
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email: storedEmail,
+            password: storedPassword,
+          });
+          if (error) throw error;
+          if (onLogin) onLogin(data.session);
+        } else {
+          Alert.alert('Error', 'No se encontraron credenciales guardadas.');
+        }
+      }
+    } catch (e: any) {
+      Alert.alert('Error Biométrico', e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogin = async () => {
     if (!email || !password) return;
@@ -102,7 +154,29 @@ export default function LoginScreen({ onLogin }: any) {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      if (onLogin) onLogin(data.session);
+
+      // Si el login es exitoso, preguntamos si quiere activar huella si no lo ha hecho
+      const biometricsEnabled = await SecureStore.getItemAsync('biometrics_enabled');
+      if (biometricsAvailable && biometricsEnabled !== 'true') {
+        Alert.alert(
+          'Activar Huella Digital',
+          '¿Deseas activar el inicio de sesión con huella para la próxima vez?',
+          [
+            { text: 'Ahora no', onPress: () => { if (onLogin) onLogin(data.session); } },
+            { 
+              text: 'Sí, Activar', 
+              onPress: async () => {
+                await SecureStore.setItemAsync('user_email', email);
+                await SecureStore.setItemAsync('user_password', password);
+                await SecureStore.setItemAsync('biometrics_enabled', 'true');
+                if (onLogin) onLogin(data.session);
+              } 
+            }
+          ]
+        );
+      } else {
+        if (onLogin) onLogin(data.session);
+      }
     } catch (e: any) {
       Alert.alert('Error de Acceso', e.message);
     } finally {
@@ -125,9 +199,9 @@ export default function LoginScreen({ onLogin }: any) {
             <View style={styles.logoContainer}>
               <View style={styles.iconCircle}>
                 <Music color="#D4AF37" size={50} />
-                <FloatingNote delay={0} />
-                <FloatingNote delay={1000} />
-                <FloatingNote delay={2000} />
+                {[...Array(10)].map((_, i) => (
+                  <FloatingNote key={i} delay={i * 600} />
+                ))}
               </View>
               <Text style={styles.title}>EL MARIACHI</Text>
               <Text style={styles.subtitle}>AVENTURERO</Text>
@@ -176,6 +250,19 @@ export default function LoginScreen({ onLogin }: any) {
                   <Text style={styles.buttonText}>INGRESAR AL SISTEMA</Text>
                 )}
               </TouchableOpacity>
+
+              {biometricsAvailable && hasStoredCredentials && (
+                <TouchableOpacity 
+                  style={styles.biometricButton} 
+                  onPress={handleBiometricLogin}
+                  disabled={loading}
+                >
+                  <View style={styles.fingerprintIconCircle}>
+                    <Fingerprint color="#D4AF37" size={50} strokeWidth={1.5} />
+                  </View>
+                  <Text style={styles.biometricText}>INICIAR SESIÓN CON HUELLA DIGITAL</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         </KeyboardAvoidingView>
@@ -276,5 +363,30 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     letterSpacing: 1.5,
+  },
+  biometricButton: {
+    alignItems: 'center',
+    gap: 15,
+    marginTop: 35,
+    padding: 20,
+    width: '100%',
+  },
+  fingerprintIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 1,
+    borderColor: 'rgba(212,175,55,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(212,175,55,0.05)',
+  },
+  biometricText: {
+    color: '#D4AF37',
+    fontSize: 11,
+    fontWeight: 'bold',
+    letterSpacing: 2,
+    opacity: 0.8,
+    textAlign: 'center',
   }
 });

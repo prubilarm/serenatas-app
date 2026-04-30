@@ -6,20 +6,24 @@ import {
 import { 
   MessageCircle, MapPin, Trash2, Edit3, 
   Clock, DollarSign, Calendar, Check, RotateCcw,
-  FileText, Music, X
+  FileText, Music, X, Share2
 } from 'lucide-react-native';
 import { supabase } from '../lib/supabase';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
+import { Asset } from 'expo-asset';
+import * as FileSystem from 'expo-file-system/legacy';
+import imagenFondo from '../../assets/imagen_comprobante.jpeg';
 
 export default function SerenataCard({ serenata, onUpdate, onEdit }: any) {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [montoPago, setMontoPago] = useState('');
-  const [medioPago, setMedioPago] = useState('Transferencia'); // 'Transferencia' o 'Efectivo'
+  const [medioPago, setMedioPago] = useState('Transferencia');
   
   const s = serenata;
   
   const handleStatusToggle = async () => {
     if (s.estado !== 'completada') {
-      // Al finalizar, primero registramos el pago
       setMontoPago(s.precio_total?.toString() || '');
       setShowPaymentModal(true);
     } else {
@@ -32,24 +36,13 @@ export default function SerenataCard({ serenata, onUpdate, onEdit }: any) {
 
   const confirmFinalization = async () => {
     try {
-      await supabase.from('serenatas').update({ 
-        estado: 'completada',
-        monto_pagado: Number(montoPago),
-        medio_pago: medioPago
-      }).eq('id', s.id);
-      
+      const { error } = await supabase.from('serenatas').update({ estado: 'completada' }).eq('id', s.id);
+      if (error) throw error;
       setShowPaymentModal(false);
       if (onUpdate) onUpdate();
-      
-      Alert.alert(
-        'Servicio Finalizado',
-        '¿Deseas enviar el comprobante de pago por WhatsApp?',
-        [
-          { text: 'No', onPress: () => {} },
-          { text: 'SÍ, ENVIAR', onPress: () => handleWhatsAppPago() }
-        ]
-      );
-    } catch (e: any) { Alert.alert('Error', e.message); }
+    } catch (e: any) { 
+      Alert.alert('Error', 'No se pudo completar: ' + e.message); 
+    }
   };
 
   const openMap = () => {
@@ -59,62 +52,103 @@ export default function SerenataCard({ serenata, onUpdate, onEdit }: any) {
     if (url) Linking.openURL(url);
   };
 
-  const handleWhatsAppPago = () => {
-    // SIN CANCIONES en el comprobante de pago
-    const msg = `🎺 *EL MARIACHI AVENTURERO*
-━━━━━━━━━━━━━━━━━━━
-✅ *COMPROBANTE DE PAGO*
+  const generatePDF = async (type: 'reserva' | 'pago') => {
+    try {
+      let imgUri = '';
+      try {
+        const asset = Asset.fromModule(imagenFondo);
+        await asset.downloadAsync();
+        const base64Img = await FileSystem.readAsStringAsync(asset.localUri || asset.uri, { encoding: 'base64' });
+        imgUri = `data:image/jpeg;base64,${base64Img}`;
+      } catch (imgError) {
+        console.warn('PDF: Imagen de fondo no disponible, se usará diseño plano.');
+      }
 
-Hola *${s.nombre_cliente}*, confirmamos la recepción del pago por la serenata realizada hoy.
+      const isReserva = type === 'reserva';
+      const fechaTxt = s.fecha ? s.fecha.split('-').reverse().join('/') : 'Por definir';
+      const valorTxt = s.precio_total ? s.precio_total.toLocaleString('es-CL') : '0';
+      const montoPagadoTxt = Number(montoPago || s.precio_total || 0).toLocaleString('es-CL');
+      
+      let cancionesTxt = 'A elección del cliente';
+      if (s.canciones && Array.isArray(s.canciones) && s.canciones.length > 0) {
+        cancionesTxt = s.canciones.map((c: string, i: number) => `${i + 1}.- ${c}`).join('<br/>');
+      }
 
-*DETALLES DEL SERVICIO:*
-• *Festejada:* ${s.nombre_festejada}
-• *Motivo:* ${s.motivo || 'Serenata'}
-• *Fecha:* ${s.fecha.split('-').reverse().join('-')}
-• *Ubicación:* ${s.direccion}, ${s.comuna}
+      const title = isReserva ? 'CONFIRMACIÓN DE RESERVA' : 'COMPROBANTE DE PAGO';
+      const msgPrincipal = isReserva ? '¡Tu serenata ha sido agendada!' : '¡Pago recibido correctamente!';
 
-*MONTO PAGADO:* $${Number(montoPago || s.precio_total).toLocaleString()}
-*MEDIO DE PAGO:* ${medioPago}
+      const html = `
+        <html>
+          <head>
+            <style>
+              body { margin: 0; padding: 0; font-family: Helvetica, sans-serif; background: #000; color: #fff; }
+              .container {
+                position: relative; width: 100%; height: 100vh;
+                background-color: #0c0c0c;
+                ${imgUri ? `background-image: url('${imgUri}');` : ''}
+                background-size: cover; background-position: center;
+              }
+              .overlay {
+                position: absolute; inset: 0;
+                background: rgba(0, 0, 0, 0.7);
+                display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; text-align: center;
+              }
+              .header { border-bottom: 2px solid #D4AF37; margin-bottom: 30px; width: 85%; padding-bottom: 20px; }
+              .brand { color: #D4AF37; font-size: 16px; font-weight: bold; letter-spacing: 4px; }
+              .title { font-size: 32px; font-weight: bold; color: #fff; margin-top: 10px; }
+              .content { 
+                width: 90%; background: rgba(20, 20, 20, 0.8); border-radius: 20px; 
+                padding: 30px; border: 1px solid rgba(212, 175, 55, 0.3); text-align: left;
+              }
+              .item { margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px; }
+              .label { font-size: 10px; color: #D4AF37; font-weight: bold; text-transform: uppercase; }
+              .value { font-size: 18px; font-weight: bold; color: #fff; }
+              .price-box { 
+                margin-top: 20px; border: 2px solid ${isReserva ? '#D4AF37' : '#2ecc71'}; 
+                padding: 15px; border-radius: 12px; text-align: center;
+              }
+              .price-value { font-size: 28px; font-weight: bold; color: ${isReserva ? '#fff' : '#2ecc71'}; }
+              .footer { margin-top: 40px; font-size: 12px; color: #D4AF37; font-style: italic; }
+            </style>
+          </head>
+          <body>
+            <div class="container"><div class="overlay">
+              <div class="header">
+                <div class="brand">EL MARIACHI AVENTURERO</div>
+                <div class="title">${title}</div>
+              </div>
+              <div class="content">
+                <div class="item"><div class="label">CLIENTE</div><div class="value">${s.nombre_cliente || 'N/A'}</div></div>
+                <div class="item"><div class="label">FESTEJADA</div><div class="value">${s.nombre_festejada || 'N/A'}</div></div>
+                <div class="item"><div class="label">FECHA Y HORA</div><div class="value">${fechaTxt} - ${s.hora || '--:--'} hrs</div></div>
+                <div class="item"><div class="label">DIRECCIÓN</div><div class="value">${s.direccion || 'N/A'}, ${s.comuna || ''}</div></div>
+                <div class="item"><div class="label">${isReserva ? 'REPERTORIO' : 'MEDIO DE PAGO'}</div><div class="value" style="font-size: 14px;">${isReserva ? cancionesTxt : medioPago}</div></div>
+                <div class="price-box">
+                  <div class="label">${isReserva ? 'VALOR TOTAL' : 'MONTO PAGADO'}</div>
+                  <div class="price-value">$ ${isReserva ? valorTxt : montoPagadoTxt}</div>
+                </div>
+              </div>
+              <div class="footer">"Hacemos de cada momento algo inolvidable"</div>
+            </div></div>
+          </body>
+        </html>
+      `;
 
-Muchas gracias por preferir nuestros servicios. ¡Hicimos de este momento algo inolvidable! 🌹`;
-    
-    sendWhatsApp(msg);
-  };
+      const { uri } = await Print.printToFileAsync({ html, base64: false });
+      const safeName = (s.nombre_festejada || 'Cliente').replace(/ /g, '_').substring(0, 15);
+      const filename = `${isReserva ? 'Reserva' : 'Comprobante'}_${safeName}.pdf`;
+      const newUri = FileSystem.cacheDirectory + filename;
+      
+      await FileSystem.moveAsync({ from: uri, to: newUri });
 
-  const handleWhatsAppReserva = () => {
-    // CON CANCIONES y LISTA NUMERADA
-    let cancionesTxt = 'A elección del cliente';
-    if (s.canciones?.length > 0) {
-      cancionesTxt = '\n' + s.canciones.map((c: string, i: number) => `${i + 1}.- ${c}`).join('\n');
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(newUri, { mimeType: 'application/pdf', UTI: 'com.adobe.pdf' });
+      } else {
+        Alert.alert('Error', 'No se puede compartir el archivo.');
+      }
+    } catch (error: any) {
+      Alert.alert('Error', 'No se pudo generar el documento: ' + error.message);
     }
-
-    const msg = `🎺 *EL MARIACHI AVENTURERO*
-━━━━━━━━━━━━━━━━━━━
-✅ *CONFIRMACIÓN DE RESERVA*
-
-Hola *${s.nombre_cliente}*, tu reserva ha sido agendada con éxito.
-
-*DETALLES DE LA CITA:*
-• *Para:* ${s.nombre_festejada}
-• *Motivo:* ${s.motivo || 'Evento Especial'}
-• *Fecha:* ${s.fecha.split('-').reverse().join('-')}
-• *Hora:* ${s.hora}
-• *Dirección:* ${s.direccion}, ${s.comuna}
-• *Repertorio:* ${cancionesTxt}
-
-*VALOR DEL SERVICIO:* $${s.precio_total?.toLocaleString()}
-
-¡Muchas gracias por su confianza! Será un gusto acompañarles con nuestra música. 🎸🌹`;
-    
-    sendWhatsApp(msg);
-  };
-
-  const sendWhatsApp = (text: string) => {
-    let phone = s.telefono || '';
-    phone = phone.replace(/\D/g, '');
-    if (!phone.startsWith('56')) phone = '56' + phone;
-    const url = `whatsapp://send?phone=${phone}&text=${encodeURIComponent(text)}`;
-    Linking.openURL(url);
   };
 
   return (
@@ -135,87 +169,64 @@ Hola *${s.nombre_cliente}*, tu reserva ha sido agendada con éxito.
           <View style={styles.infoRow}><Clock size={14} color="#D4AF37" /><Text style={styles.infoText}>{s.hora}</Text></View>
         </View>
         <Text style={styles.festejadaName}>{s.nombre_festejada}</Text>
-        {s.canciones?.length > 0 && (
-          <View style={[styles.infoRow, { marginTop: 5 }]}>
-            <Music size={12} color="#666" />
-            <Text style={styles.cancionesMini} numberOfLines={1}>{s.canciones.length} canciones elegidas</Text>
-          </View>
-        )}
       </View>
 
       <TouchableOpacity style={styles.addressBox} onPress={openMap}>
         <MapPin size={20} color="#D4AF37" />
         <View style={{ flex: 1, marginLeft: 10 }}>
           <Text style={styles.addressText} numberOfLines={1}>{s.direccion}</Text>
-          <Text style={styles.comunaText}>{s.comuna} - TOCAR PARA MAPA</Text>
+          <Text style={styles.comunaText}>{s.comuna}</Text>
         </View>
       </TouchableOpacity>
 
       <View style={styles.cardFooter}>
         <View style={styles.priceContainer}>
           <DollarSign size={16} color="#2ecc71" />
-          <Text style={styles.priceValue}>{s.precio_total?.toLocaleString()}</Text>
-          {s.estado === 'completada' && (
-            <TouchableOpacity onPress={handleStatusToggle} style={{ marginLeft: 15, padding: 5 }}>
-              <RotateCcw size={16} color="#666" />
-            </TouchableOpacity>
-          )}
+          <Text style={styles.priceValue}>{s.precio_total?.toLocaleString('es-CL')}</Text>
         </View>
         <View style={styles.buttonGroup}>
-          <TouchableOpacity 
-            style={[styles.btnAction, {backgroundColor: '#111', borderColor: '#D4AF37', borderWidth: 1}]} 
-            onPress={handleWhatsAppReserva}
-          >
-             <MessageCircle size={18} color="#D4AF37" />
-             <Text style={[styles.btnLabel, {color: '#D4AF37'}]}>RESERVA</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.btnAction, {backgroundColor: s.estado === 'completada' ? '#2ecc71' : '#D4AF37'}]} 
-            onPress={handleStatusToggle}
-          >
-             <Check size={20} color="#000" />
-             <Text style={styles.btnLabel}>{s.estado === 'completada' ? 'FINALIZADA' : 'FINALIZAR'}</Text>
-          </TouchableOpacity>
+          {s.estado !== 'completada' ? (
+            <>
+              <TouchableOpacity style={[styles.btnAction, styles.btnOutline]} onPress={() => generatePDF('reserva')}>
+                <FileText size={18} color="#D4AF37" /><Text style={[styles.btnLabel, {color: '#D4AF37'}]}>RESERVA</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.btnAction, styles.btnGold]} onPress={handleStatusToggle}>
+                <Check size={20} color="#000" /><Text style={styles.btnLabel}>FINALIZAR</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <TouchableOpacity style={[styles.btnAction, styles.btnGreen]} onPress={() => generatePDF('pago')}>
+                <FileText size={18} color="#000" /><Text style={styles.btnLabel}>PAGADO</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.btnAction, styles.btnOutline]} onPress={handleStatusToggle}>
+                <RotateCcw size={18} color="#666" /><Text style={[styles.btnLabel, {color: '#666'}]}>VOLVER</Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       </View>
 
-      {/* MODAL REGISTRAR PAGO */}
       <Modal visible={showPaymentModal} animationType="fade" transparent={true}>
-        <View style={styles.paymentOverlay}>
-          <View style={styles.paymentModal}>
-             <View style={styles.paymentHeader}>
-                <Text style={styles.paymentTitle}>REGISTRAR PAGO</Text>
-                <TouchableOpacity onPress={() => setShowPaymentModal(false)}><X color="#666" /></TouchableOpacity>
-             </View>
-             
-             <Text style={styles.paymentLabel}>MONTO RECIBIDO</Text>
-             <TextInput 
-                style={styles.paymentInput} 
-                keyboardType="numeric" 
-                value={montoPago} 
-                onChangeText={setMontoPago}
-                placeholder="Ej: 40000"
-                placeholderTextColor="#444"
-             />
-
-             <Text style={styles.paymentLabel}>MEDIO DE PAGO</Text>
-             <View style={styles.paymentMethods}>
-                {['Transferencia', 'Efectivo'].map(m => (
-                  <TouchableOpacity 
-                    key={m} 
-                    style={[styles.methodBtn, medioPago === m && styles.methodBtnActive]} 
-                    onPress={() => setMedioPago(m)}
-                  >
-                    <Text style={[styles.methodText, medioPago === m && styles.methodTextActive]}>{m}</Text>
-                  </TouchableOpacity>
-                ))}
-             </View>
-
-             <TouchableOpacity style={styles.confirmPayBtn} onPress={confirmFinalization}>
-                <Text style={styles.confirmPayText}>CONFIRMAR Y FINALIZAR</Text>
-             </TouchableOpacity>
-          </View>
-        </View>
+        <View style={styles.paymentOverlay}><View style={styles.paymentModal}>
+           <View style={styles.paymentHeader}>
+              <Text style={styles.paymentTitle}>REGISTRAR PAGO</Text>
+              <TouchableOpacity onPress={() => setShowPaymentModal(false)}><X color="#666" /></TouchableOpacity>
+           </View>
+           <Text style={styles.paymentLabel}>MONTO RECIBIDO</Text>
+           <TextInput style={styles.paymentInput} keyboardType="numeric" value={montoPago} onChangeText={setMontoPago} />
+           <Text style={styles.paymentLabel}>MEDIO DE PAGO</Text>
+           <View style={styles.paymentMethods}>
+              {['Transferencia', 'Efectivo'].map(m => (
+                <TouchableOpacity key={m} style={[styles.methodBtn, medioPago === m && styles.methodBtnActive]} onPress={() => setMedioPago(m)}>
+                  <Text style={[styles.methodText, medioPago === m && styles.methodTextActive]}>{m}</Text>
+                </TouchableOpacity>
+              ))}
+           </View>
+           <TouchableOpacity style={styles.confirmPayBtn} onPress={confirmFinalization}>
+              <Text style={styles.confirmPayText}>GUARDAR Y FINALIZAR</Text>
+           </TouchableOpacity>
+        </View></View>
       </Modal>
     </View>
   );
@@ -236,21 +247,23 @@ const styles = StyleSheet.create({
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   infoText: { color: '#888', fontSize: 12 },
   festejadaName: { color: '#FFF', fontSize: 20, fontWeight: 'bold' },
-  cancionesMini: { color: '#555', fontSize: 11, marginLeft: 5 },
   addressBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#111', padding: 15, borderRadius: 15, marginBottom: 15 },
   addressText: { color: '#FFF', fontSize: 14, fontWeight: 'bold' },
   comunaText: { color: '#D4AF37', fontSize: 10, fontWeight: 'bold' },
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  priceContainer: { flexDirection: 'row', alignItems: 'center' },
-  priceValue: { color: '#2ecc71', fontSize: 18, fontWeight: 'bold' },
+  cardFooter: { marginTop: 10 },
+  priceContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 15, borderTopWidth: 1, borderTopColor: '#1A1A1A', paddingTop: 15 },
+  priceValue: { color: '#2ecc71', fontSize: 22, fontWeight: 'bold', marginLeft: 2 },
   buttonGroup: { flexDirection: 'row', gap: 10 },
-  btnAction: { height: 45, paddingHorizontal: 15, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  btnLabel: { color: '#000', fontWeight: 'bold', fontSize: 12 },
+  btnAction: { flex: 1, height: 48, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  btnOutline: { backgroundColor: '#111', borderColor: '#333', borderWidth: 1 },
+  btnGold: { backgroundColor: '#D4AF37' },
+  btnGreen: { backgroundColor: '#2ecc71' },
+  btnLabel: { color: '#000', fontWeight: 'bold', fontSize: 11 },
   paymentOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', padding: 30 },
   paymentModal: { backgroundColor: '#111', borderRadius: 25, padding: 25, borderWidth: 1, borderColor: '#222' },
   paymentHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   paymentTitle: { color: '#D4AF37', fontWeight: 'bold', fontSize: 16 },
-  paymentLabel: { color: '#444', fontSize: 10, fontWeight: 'bold', marginBottom: 10, marginTop: 10 },
+  paymentLabel: { color: '#444', fontSize: 10, fontWeight: 'bold', marginBottom: 8, marginTop: 15 },
   paymentInput: { backgroundColor: '#1A1A1A', padding: 15, borderRadius: 12, color: '#FFF', fontSize: 18, fontWeight: 'bold' },
   paymentMethods: { flexDirection: 'row', gap: 10, marginTop: 5 },
   methodBtn: { flex: 1, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#222', alignItems: 'center' },

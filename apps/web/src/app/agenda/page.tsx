@@ -91,7 +91,7 @@ export default function AgendaPage() {
           </div>
           <div className="grid grid-cols-7 gap-2 text-center text-sm">
             {days.map((day) => {
-              const hasEvent = serenatas.some(s => isSameDay(parseISO(s.fecha), day));
+              const daySerenatas = serenatas.filter(s => isSameDay(parseISO(s.fecha), day));
               const isSelected = isSameDay(day, selectedDate);
               const isToday = isSameDay(day, new Date());
 
@@ -99,15 +99,26 @@ export default function AgendaPage() {
                 <button 
                   key={day.toString()}
                   onClick={() => setSelectedDate(day)}
-                  className={`w-8 h-8 rounded-full flex flex-col items-center justify-center mx-auto transition-all relative ${
-                    isSelected ? 'bg-[var(--accent-gold)] text-black font-bold' : 
-                    isToday ? 'border border-[var(--accent-gold)] text-[var(--accent-gold)]' :
-                    'text-white/70 hover:bg-white/10'
+                  className={`w-10 h-10 rounded-xl flex flex-col items-center justify-center mx-auto transition-all relative border ${
+                    isSelected ? 'bg-[var(--accent-gold)] border-[var(--accent-gold)] text-black font-bold shadow-lg shadow-[var(--accent-gold)]/20' : 
+                    isToday ? 'border-[var(--accent-gold)]/50 text-[var(--accent-gold)] bg-[var(--accent-gold)]/5' :
+                    'text-white/70 border-white/5 hover:bg-white/10 hover:border-white/10'
                   }`}
                 >
-                  {format(day, 'd')}
-                  {hasEvent && !isSelected && (
-                    <span className="absolute bottom-1 w-1 h-1 bg-[var(--accent-gold)] rounded-full"></span>
+                  <span className="text-sm">{format(day, 'd')}</span>
+                  {daySerenatas.length > 0 && (
+                    <div className="absolute -bottom-1 flex gap-0.5">
+                      {daySerenatas.slice(0, 3).map((s, idx) => {
+                        const isFin = s.estado === 'finalizada' || s.estado === 'realizada' || s.estado === 'completada';
+                        return (
+                          <div 
+                            key={s.id} 
+                            className={`w-1 h-1 rounded-full ${isFin ? 'bg-emerald-500' : 'bg-yellow-500'}`}
+                          />
+                        );
+                      })}
+                      {daySerenatas.length > 3 && <div className="w-1 h-1 rounded-full bg-white/50" />}
+                    </div>
                   )}
                 </button>
               );
@@ -115,61 +126,79 @@ export default function AgendaPage() {
           </div>
 
           <div className="mt-8 pt-6 border-t border-white/10">
-            <h3 className="text-sm font-medium text-white/50 mb-4 uppercase tracking-wider">Próxima Serenata</h3>
+            <h3 className="text-[10px] font-black text-white/30 mb-4 uppercase tracking-[0.2em]">Resumen del Día</h3>
             {loading ? (
               <Loader2 className="animate-spin text-[var(--accent-gold)] mx-auto" size={20} />
-            ) : serenatas.length > 0 ? (
-              <div className="bg-white/5 rounded-lg p-4 border border-white/5">
-                <div className="flex items-center gap-2 text-[var(--accent-gold)] mb-1">
-                  <Clock size={16} /> <span className="text-sm font-bold">{serenatas[0].hora} hrs</span>
+            ) : selectedDateSerenatas.length > 0 ? (
+              <div className="space-y-2">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-white/50">Total eventos:</span>
+                  <span className="text-white font-bold">{selectedDateSerenatas.length}</span>
                 </div>
-                <p className="font-medium text-white">{serenatas[0].motivo} a {serenatas[0].nombre_festejada}</p>
-                <div className="flex items-baseline gap-2 text-white/50 text-xs mt-2">
-                  <MapPin size={12} /> {serenatas[0].comuna}
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-white/50">Finalizadas:</span>
+                  <span className="text-emerald-500 font-bold">{selectedDateSerenatas.filter(s => s.estado === 'finalizada' || s.estado === 'realizada' || s.estado === 'completada').length}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-white/50">Pendientes:</span>
+                  <span className="text-yellow-500 font-bold">{selectedDateSerenatas.filter(s => s.estado !== 'finalizada' && s.estado !== 'realizada' && s.estado !== 'completada').length}</span>
                 </div>
               </div>
             ) : (
-              <p className="text-white/30 text-sm italic">No hay eventos próximos.</p>
+              <p className="text-white/20 text-[10px] italic uppercase tracking-widest text-center">Día libre</p>
             )}
           </div>
         </div>
 
         {/* Lista de eventos del día */}
         <div className="glass-card lg:col-span-2">
-          <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10">
-            <h2 className="text-xl font-semibold text-white capitalize">
-              {format(selectedDate, "EEEE, d 'de' MMMM", { locale: es })}
-            </h2>
+          <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/5">
+            <div>
+              <h2 className="text-2xl font-bold text-white capitalize">
+                {format(selectedDate, "EEEE, d 'de' MMMM", { locale: es })}
+              </h2>
+              <p className="text-[10px] font-black text-[var(--accent-gold)] uppercase tracking-[0.3em] mt-1">
+                {selectedDateSerenatas.length} {selectedDateSerenatas.length === 1 ? 'Serenata Programada' : 'Serenatas Programadas'}
+              </p>
+            </div>
           </div>
 
           {loading ? (
             <div className="py-20 flex justify-center"><Loader2 className="animate-spin text-[var(--accent-gold)]" size={40} /></div>
           ) : selectedDateSerenatas.length === 0 ? (
-            <div className="py-20 text-center text-white/30 italic">
+            <div className="py-20 text-center text-white/10 italic bg-white/[0.02] rounded-3xl border border-dashed border-white/5 uppercase tracking-widest text-xs">
               No hay serenatas agendadas para este día.
             </div>
           ) : (
             <div className="space-y-4">
-              {selectedDateSerenatas.map((serenata) => (
-                <div key={serenata.id} className="flex gap-4 p-4 rounded-xl hover:bg-white/5 transition-colors border border-transparent hover:border-white/5 group">
-                  <div className="flex flex-col items-center justify-center bg-white/5 w-16 h-16 rounded-lg text-[var(--accent-gold)] font-bold">
-                    <span className="text-[10px] uppercase tracking-widest text-white/50">{serenata.hora}</span>
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex justify-between items-start">
-                      <h3 className="text-lg font-medium text-white group-hover:text-[var(--accent-gold)] transition-colors">
-                        {serenata.motivo} a {serenata.nombre_festejada}
-                      </h3>
-                      <span className={`px-2 py-1 bg-white/5 border border-white/10 text-[10px] rounded-full uppercase font-bold tracking-tighter ${serenata.estado === 'completada' ? 'text-emerald-500' : 'text-yellow-500'}`}>
-                        {serenata.estado || 'Confirmada'}
-                      </span>
+              {selectedDateSerenatas.sort((a,b) => a.hora.localeCompare(b.hora)).map((serenata) => {
+                const isFin = serenata.estado === 'finalizada' || serenata.estado === 'completada' || serenata.estado === 'realizada';
+                return (
+                  <div key={serenata.id} className="flex gap-6 p-6 rounded-3xl bg-white/[0.02] hover:bg-white/[0.05] transition-all border border-white/5 hover:border-[var(--accent-gold)]/30 group">
+                    <div className="flex flex-col items-center justify-center bg-black/40 w-20 h-20 rounded-2xl border border-white/5 group-hover:border-[var(--accent-gold)]/50 transition-all">
+                      <span className="text-[10px] uppercase font-black tracking-widest text-white/30">HORA</span>
+                      <span className="text-xl font-black text-[var(--accent-gold)]">{serenata.hora.slice(0,5)}</span>
                     </div>
-                    <div className="flex items-center gap-4 text-sm text-white/50 mt-2">
-                      <span className="flex items-center gap-1"><MapPin size={14} /> {serenata.comuna}</span>
+                    <div className="flex-1 flex flex-col justify-center">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="text-xl font-bold text-white group-hover:text-[var(--accent-gold)] transition-colors">
+                            {serenata.nombre_festejada}
+                          </h3>
+                          <p className="text-xs text-white/40 font-bold uppercase tracking-widest mt-1">{serenata.motivo}</p>
+                        </div>
+                        <span className={`px-4 py-1.5 border text-[10px] rounded-full uppercase font-black tracking-widest ${isFin ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-yellow-500/10 border-yellow-500/20 text-yellow-500'}`}>
+                          {serenata.estado || 'Confirmada'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-6 text-xs text-white/30 mt-4 font-bold uppercase tracking-widest">
+                        <span className="flex items-center gap-2"><MapPin size={14} className="text-[var(--accent-gold)]" /> {serenata.comuna}</span>
+                        <span className="flex items-center gap-2"><Clock size={14} className="text-[var(--accent-gold)]" /> {serenata.hora} hrs</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

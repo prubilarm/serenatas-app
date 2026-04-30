@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getSerenatas, createSerenata, updateEstadoSerenata } from '../controllers/serenataController';
+import { getSerenatas, createSerenata, updateEstadoSerenata, updateSerenata, deleteSerenata } from '../controllers/serenataController';
 
 const router = Router();
 
@@ -7,7 +7,7 @@ const router = Router();
  * @swagger
  * /api/serenatas:
  *   get:
- *     summary: Lista todas las serenatas (con datos del cliente)
+ *     summary: Lista todas las serenatas
  *     tags: [Serenatas]
  *     responses:
  *       200:
@@ -21,62 +21,41 @@ router.get('/', getSerenatas);
  *   post:
  *     summary: Registra una nueva serenata
  *     tags: [Serenatas]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               cliente_id:
- *                 type: string
- *               nombre_festejada:
- *                 type: string
- *               motivo:
- *                 type: string
- *               fecha:
- *                 type: string
- *               hora:
- *                 type: string
- *               direccion:
- *                 type: string
- *               comuna:
- *                 type: string
- *               tipo:
- *                 type: string
- *                 enum: [express, full]
- *               precio_total:
- *                 type: number
- *     responses:
- *       201:
- *         description: Serenata creada
  */
 router.post('/', createSerenata);
 
 /**
  * @swagger
- * /api/serenatas/{id}/estado:
- *   patch:
- *     summary: Actualiza el estado de una serenata (ej. confirmada, realizada)
+ * /api/serenatas/{id}:
+ *   put:
+ *     summary: Actualiza una serenata
  *     tags: [Serenatas]
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               estado:
- *                 type: string
- *     responses:
- *       200:
- *         description: Estado actualizado
+ */
+router.put('/:id', updateSerenata);
+
+/**
+ * @swagger
+ * /api/serenatas/{id}:
+ *   delete:
+ *     summary: Elimina una serenata
+ *     tags: [Serenatas]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ */
+router.delete('/:id', deleteSerenata);
+
+/**
+ * @swagger
+ * /api/serenatas/{id}/estado:
+ *   patch:
+ *     summary: Actualiza solo el estado
+ *     tags: [Serenatas]
  */
 router.patch('/:id/estado', updateEstadoSerenata);
 
