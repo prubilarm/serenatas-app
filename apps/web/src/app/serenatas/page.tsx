@@ -73,7 +73,7 @@ function SerenatasContent() {
       const pred = predecirComuna(value);
       setFormData(prev => ({ ...prev, direccion: value, comuna: pred || prev.comuna }));
     } else if (name === 'tipo') {
-       const newPrice = value === 'express' ? 25000 : 45000;
+       const newPrice = value === 'express' ? 25000 : 40000;
        setFormData(prev => ({ ...prev, tipo: value, precio_total: newPrice, canciones: [] }));
     } else {
        setFormData(prev => ({ ...prev, [name]: name === 'precio_total' ? Number(value) : value }));
@@ -367,7 +367,7 @@ function SerenatasContent() {
                         <label className="label-text">Plan de Serenata</label>
                         <select name="tipo" value={formData.tipo} onChange={handleInputChange} className="input-field bg-black font-black text-[var(--accent-gold)] uppercase tracking-widest cursor-pointer">
                            <option value="express">Express (2 canciones) - $25.000</option>
-                           <option value="full">Full (4 canciones) - $45.000</option>
+                           <option value="full">Full (4 canciones) - $40.000</option>
                         </select>
                     </div>
                     <div>
