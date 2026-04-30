@@ -19,7 +19,9 @@ export const getSerenatas = async (req: Request, res: Response) => {
 
 export const createSerenata = async (req: Request, res: Response) => {
   try {
-    const { nombre_cliente, telefono, ...rest } = req.body;
+    const { nombre_cliente, telefono: telRaw, ...rest } = req.body;
+    const telefono = telRaw?.toString().trim();
+    const nombre = nombre_cliente?.toString().trim();
     
     let clienteId = req.body.cliente_id;
 
@@ -38,7 +40,7 @@ export const createSerenata = async (req: Request, res: Response) => {
         // Crear nuevo cliente si no existe
         const nuevoCliente = {
           id: crypto.randomUUID(),
-          nombre: nombre_cliente,
+          nombre: nombre,
           telefono: telefono
         };
         const { data: clienteNuevo, error: errorCliente } = await supabase
@@ -49,7 +51,7 @@ export const createSerenata = async (req: Request, res: Response) => {
         
         if (errorCliente) {
           console.error('Error creating client:', errorCliente);
-          throw new Error('No se pudo crear el cliente para la serenata.');
+          throw new Error(`No se pudo crear el cliente: ${errorCliente.message}`);
         }
         clienteId = clienteNuevo.id;
       }
