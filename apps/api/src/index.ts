@@ -11,7 +11,11 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3001;
 
-app.use(cors());
+app.use(cors({
+  origin: '*', // Permitir todo por ahora para debuggear el error de fetch
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 
 // Logger simple para debug en Vercel
@@ -21,9 +25,14 @@ app.use((req, res, next) => {
 });
 
 // Rutas
+// Rutas con y sin prefijo /api para mayor compatibilidad
 app.use('/api/clientes', clienteRoutes);
 app.use('/api/serenatas', serenataRoutes);
 app.use('/api/pagos', pagoRoutes);
+
+app.use('/clientes', clienteRoutes);
+app.use('/serenatas', serenataRoutes);
+app.use('/pagos', pagoRoutes);
 
 // Documentación de la API
 try {
@@ -33,11 +42,15 @@ try {
 }
 
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
-    business: 'El Mariachi Aventurero',
-    env: process.env.NODE_ENV
-  });
+  res.json({ status: 'ok', business: 'El Mariachi Aventurero' });
+});
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
+app.get('/', (req, res) => {
+  res.json({ message: 'API El Mariachi Aventurero is running' });
 });
 
 // Para compatibilidad con Vercel: No llamar a listen si se exporta para serverless

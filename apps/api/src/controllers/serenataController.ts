@@ -26,16 +26,16 @@ export const createSerenata = async (req: Request, res: Response) => {
     // Si no viene cliente_id pero si nombre y telefono, buscamos o creamos el cliente
     if (!clienteId && nombre_cliente && telefono) {
       // Intentar buscar cliente por teléfono
-      const { data: clienteExistente } = await supabase
+      const { data: clienteExistente, error: searchError } = await supabase
         .from('clientes')
         .select('id')
         .eq('telefono', telefono)
-        .single();
+        .maybeSingle(); // Usamos maybeSingle para evitar el error PGRST116 si no hay resultados
 
       if (clienteExistente) {
         clienteId = clienteExistente.id;
       } else {
-        // Crear nuevo cliente
+        // Crear nuevo cliente si no existe
         const nuevoCliente = {
           id: crypto.randomUUID(),
           nombre: nombre_cliente,
@@ -44,10 +44,13 @@ export const createSerenata = async (req: Request, res: Response) => {
         const { data: clienteNuevo, error: errorCliente } = await supabase
           .from('clientes')
           .insert([nuevoCliente])
-          .select()
+          .select('id')
           .single();
         
-        if (errorCliente) throw errorCliente;
+        if (errorCliente) {
+          console.error('Error creating client:', errorCliente);
+          throw new Error('No se pudo crear el cliente para la serenata.');
+        }
         clienteId = clienteNuevo.id;
       }
     }

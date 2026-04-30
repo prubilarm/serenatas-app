@@ -31,9 +31,12 @@ const options: swaggerJsdoc.Options = {
   ], 
 };
 
-const specs = swaggerJsdoc(options);
-
 export const setupSwagger = (app: Express) => {
-  app.use('/docs', swaggerUi.serve, swaggerUi.setup(specs));
-  console.log('Swagger docs available at /docs');
+  try {
+    const specs = swaggerJsdoc(options);
+    app.use('/docs', swaggerUi.serve, swaggerUi.setup(specs));
+    console.log('Swagger docs available at /docs');
+  } catch (err) {
+    console.error('Failed to initialize Swagger:', err);
+  }
 };
