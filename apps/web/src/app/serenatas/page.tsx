@@ -1,9 +1,6 @@
 "use client";
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { Plus, Search, X, Music, CheckCircle, ChevronDown, MapPin, FileText, Send, Phone, Trash2, Clock, MessageCircle, RotateCcw, Loader2, Pencil, Wallet, Users, ChevronRight, Star } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import jsPDF from 'jspdf';
@@ -21,7 +18,7 @@ const LISTADO_CANCIONES = [
   "Madrecita querida", "Mi amigo el tordillo", "Es la mujer"
 ].sort();
 
-export default function SerenatasPage() {
+function SerenatasContent() {
   const searchParams = useSearchParams();
   const estadoFilter = searchParams.get('estado') || 'confirmada'; 
 
@@ -627,5 +624,17 @@ export default function SerenatasPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function SerenatasPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="animate-spin text-[var(--accent-gold)]" size={48} />
+      </div>
+    }>
+      <SerenatasContent />
+    </Suspense>
   );
 }
