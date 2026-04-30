@@ -112,6 +112,10 @@ function SerenatasContent() {
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api-alpha-five-25.vercel.app/api';
       const url = editingId ? `${apiUrl}/serenatas/${editingId}` : `${apiUrl}/serenatas`;
+      
+      // DEBUG: Verificamos a qué URL estamos pegando
+      console.log('Intentando fetch a:', url);
+
       const response = await fetch(url, {
         method: editingId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -137,7 +141,10 @@ function SerenatasContent() {
       setShowForm(false); setEditingId(null); resetForm(); fetchData();
     } catch (e: any) { 
       console.error(e); 
-      alert(`❌ Error: ${e.message}`);
+      // Calculamos la URL de nuevo para el error por si acaso
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api-alpha-five-25.vercel.app/api';
+      const url = editingId ? `${apiUrl}/serenatas/${editingId}` : `${apiUrl}/serenatas`;
+      alert(`❌ Error: ${e.message} (Intentando conectar a: ${url})`);
     }
     finally { setSaving(false); }
   };
