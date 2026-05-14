@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { Plus, Search, X, Music, CheckCircle, ChevronDown, MapPin, FileText, Send, Phone, Trash2, Clock, MessageCircle, RotateCcw, Loader2, Pencil, Wallet, Users, ChevronRight, Star } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
-import jsPDF from 'jspdf';
+
 import { COMUNAS, predecirComuna } from '../../lib/comunas';
 
 const LISTADO_CANCIONES = [
@@ -208,100 +208,24 @@ function SerenatasContent() {
 
   const generatePDF = async (s: any, type: 'reserva' | 'pago') => {
     try {
-      const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-
-      // 1. Imagen de Fondo (Buscamos la misma que en mobile)
-      const img = new Image();
-      img.src = '/imagen_comprobante.jpeg';
-      await new Promise((resolve) => { img.onload = resolve; img.onerror = resolve; });
-
-      if (img.complete && img.naturalWidth > 0) {
-        doc.addImage(img, 'JPEG', 0, 0, pageWidth, pageHeight);
-      }
-
-      // 2. Fondo Oscuro Premium (Overlay)
-      doc.setFillColor(15, 15, 15);
-      doc.setGState(new (doc as any).GState({ opacity: 0.8 }));
-      doc.rect(0, 0, pageWidth, pageHeight, 'F');
-      doc.setGState(new (doc as any).GState({ opacity: 1 }));
-
-      const isReserva = type === 'reserva';
-      const accentColor = isReserva ? [212, 175, 55] : [46, 204, 113]; // Gold vs Green
-      const [r, g, b] = accentColor;
-
-      // 3. Header
-      doc.setTextColor(r, g, b);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      doc.text('EL MARIACHI AVENTURERO', pageWidth / 2, 30, { align: 'center' });
-
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(28);
-      const mainTitle = isReserva ? 'CONFIRMACIÓN DE RESERVA' : 'COMPROBANTE DE PAGO';
-      doc.text(mainTitle, pageWidth / 2, 45, { align: 'center' });
-
-      doc.setDrawColor(r, g, b);
-      doc.setLineWidth(0.5);
-      doc.line(40, 50, pageWidth - 40, 50);
-
-      // 4. Bloque de Datos
-      const startY = 75;
-      const leftCol = 45;
-
-      const drawField = (label: string, value: string, y: number) => {
-        doc.setFontSize(9);
-        doc.setTextColor(r, g, b);
-        doc.setFont('helvetica', 'bold');
-        doc.text(label.toUpperCase(), leftCol, y);
-        
-        doc.setTextColor(255, 255, 255);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(14);
-        doc.text(value || '---', leftCol, y + 8);
-      };
-
-      drawField('Cliente Solicitante', s.nombre_cliente, startY);
-      drawField('Dedicado a', s.nombre_festejada, startY + 22);
-      drawField('Motivo / Comentario', s.motivo || 'Serenata Especial', startY + 44);
-      drawField('Ubicación del evento', `${s.direccion}, ${s.comuna}`, startY + 66);
-      
-      const fechaFormat = s.fecha.split('-').reverse().join('/');
-      drawField('Programación', `${fechaFormat} - ${s.hora} hrs`, startY + 88);
-
-      if (isReserva) {
-        const cancs = s.canciones?.length > 0 ? s.canciones.join(', ') : 'Selección en vivo';
-        drawField('Canciones Elegidas', cancs, startY + 110);
-      } else {
-        drawField('Detalle Financiero', `Servicio pagado correctamente ✅`, startY + 110);
-      }
-
-      // 5. Caja de Precio (Bottom)
-      const priceY = 220;
-      doc.setDrawColor(r, g, b);
-      doc.setLineWidth(1);
-      doc.roundedRect(55, priceY, pageWidth - 110, 25, 5, 5, 'D');
-      
-      doc.setTextColor(r, g, b);
-      doc.setFontSize(10);
-      doc.text(isReserva ? 'VALOR TOTAL DEL SERVICIO' : 'MONTO TOTAL RECIBIDO', pageWidth / 2, priceY + 8, { align: 'center' });
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(24);
-      doc.text(`$ ${Number(s.precio_total).toLocaleString('es-CL')}`, pageWidth / 2, priceY + 20, { align: 'center' });
-
-      // 6. Footer
-      doc.setTextColor(r, g, b);
-      doc.setFontSize(11);
-      doc.text('"Hacemos de cada momento algo inolvidable"', pageWidth / 2, 270, { align: 'center' });
-      doc.setTextColor(255, 255, 255);
-      doc.text('🌹 Gracias por su preferencia 🎸', pageWidth / 2, 278, { align: 'center' });
-
-      doc.save(`${type}_${s.nombre_festejada}.pdf`);
-      
+      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'https://api-alpha-five-25.vercel.app').replace(/\/api$/, '');
+      const endpoint = type === 'reserva'
+        ? `${apiUrl}/api/reportes/serenata/${s.id}`
+        : `${apiUrl}/api/reportes/pago/${s.id}`;
+      const res = await fetch(endpoint);
+      if (!res.ok) throw new Error('Error del servidor al generar PDF');
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = `${type}_${(s.nombre_festejada || 'cliente').replace(/ /g, '_')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     } catch (e: any) {
       console.error(e);
-      alert("Error al generar PDF.");
+      alert('Error al generar PDF: ' + e.message);
     }
   };
 
@@ -474,15 +398,15 @@ function SerenatasContent() {
             serenatas.map(s => {
               const isFin = s.estado === 'finalizada';
               return (
-                <div key={s.id} className="glass-card flex flex-col group hover:border-[var(--accent-gold)]/40 transition-all duration-700 !p-10 relative overflow-hidden backdrop-blur-3xl shadow-2xl border border-white/5">
-                   <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--accent-gold)]/5 blur-3xl rounded-full translate-x-16 -translate-y-16"></div>
+                <div key={s.id} className="glass-card flex flex-col group hover:border-[var(--accent-gold)]/40 transition-all duration-700 !p-5 relative overflow-hidden backdrop-blur-3xl shadow-2xl border border-white/10">
+                   <div className="absolute top-0 right-0 w-24 h-24 bg-[var(--accent-gold)]/5 blur-3xl rounded-full translate-x-12 -translate-y-12"></div>
                    
-                   <div className="flex justify-between items-start mb-10 relative z-10">
-                      <div className="p-5 rounded-3xl bg-gradient-to-br from-white/10 to-transparent border border-white/10 flex flex-col items-center min-w-[90px] shadow-lg">
-                         <span className="text-[10px] text-[var(--accent-gold)] uppercase font-black tracking-[0.3em] mb-2">{s.fecha.split('-').reverse().slice(0,2).join('/')}</span>
-                         <span className="text-3xl font-black text-white tracking-widest">{s.hora?.slice(0,5)}</span>
+                   <div className="flex justify-between items-start mb-4 relative z-10">
+                      <div className="p-3 rounded-2xl bg-gradient-to-br from-white/10 to-transparent border border-white/10 flex flex-col items-center min-w-[75px] shadow-lg">
+                         <span className="text-[8px] text-[var(--accent-gold)] uppercase font-black tracking-[0.3em] mb-1">{s.fecha.split('-').reverse().slice(0,2).join('/')}</span>
+                         <span className="text-xl font-black text-white tracking-widest">{s.hora?.slice(0,5)}</span>
                       </div>
-                      <div className="flex gap-4">
+                      <div className="flex gap-2">
                          <button 
                             onClick={() => {
                                setEditingId(s.id);
@@ -490,9 +414,9 @@ function SerenatasContent() {
                                setShowForm(true);
                                window.scrollTo({ top: 0, behavior: 'smooth' });
                             }} 
-                            className="p-4 rounded-2xl bg-white/5 text-white/40 border border-white/10 hover:bg-white/10 hover:text-white transition-all shadow-xl"
+                            className="p-2.5 rounded-xl bg-white/5 text-white/40 border border-white/10 hover:bg-white/10 hover:text-white transition-all shadow-xl"
                          >
-                            <Pencil size={20} />
+                            <Pencil size={14} />
                          </button>
                          <button 
                             onClick={() => {
@@ -500,75 +424,75 @@ function SerenatasContent() {
                                 fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api-alpha-five-25.vercel.app/api'}/serenatas/${s.id}`, { method: 'DELETE' }).then(() => fetchData());
                               }
                             }} 
-                            className="p-4 rounded-2xl bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all shadow-xl"
+                            className="p-2.5 rounded-xl bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all shadow-xl"
                          >
-                            <Trash2 size={20} />
+                            <Trash2 size={14} />
                          </button>
                       </div>
                    </div>
 
-                   <div className="space-y-4 mb-10 relative z-10">
-                      <div className="flex items-center gap-3">
-                         <div className={`w-3 h-3 rounded-full ${s.tipo === 'express' ? 'bg-blue-500' : 'bg-[var(--accent-gold)]'} shadow-lg shadow-current/20`}></div>
-                         <span className="text-[var(--accent-gold)] font-black text-[10px] uppercase tracking-[0.4em]">{s.tipo}</span>
-                      </div>
-                      <h2 className="text-3xl font-black text-white group-hover:text-[var(--accent-gold)] transition-all duration-500 leading-none">{s.nombre_festejada}</h2>
+                   <div className="space-y-1.5 mb-4 relative z-10">
                       <div className="flex items-center gap-2">
-                         <Star size={12} fill="var(--accent-gold)" className="text-[var(--accent-gold)]" />
-                         <p className="text-[11px] text-white/50 uppercase font-bold tracking-[0.1em]">{s.motivo || 'Serenata Especial'}</p>
+                         <div className={`w-2 h-2 rounded-full ${s.tipo === 'express' ? 'bg-blue-500' : 'bg-[var(--accent-gold)]'} shadow-lg shadow-current/20`}></div>
+                         <span className="text-[var(--accent-gold)] font-black text-[9px] uppercase tracking-[0.4em]">{s.tipo}</span>
+                      </div>
+                      <h2 className="text-xl md:text-2xl font-black text-white group-hover:text-[var(--accent-gold)] transition-all duration-500 leading-none uppercase tracking-tighter">{s.nombre_festejada}</h2>
+                      <div className="flex items-center gap-2">
+                         <Star size={10} fill="var(--accent-gold)" className="text-[var(--accent-gold)]" />
+                         <p className="text-[9px] text-white/50 uppercase font-bold tracking-[0.1em]">{s.motivo || 'Serenata Especial'}</p>
                       </div>
                    </div>
 
-                   <div className="space-y-6 relative z-10">
-                      <div className="p-5 bg-white/[0.03] rounded-3xl flex items-center gap-5 border border-white/5 group-hover:bg-white/[0.06] transition-all">
-                         <div className="p-3 bg-[var(--accent-gold)]/10 rounded-xl">
-                            <MapPin size={22} className="text-[var(--accent-gold)]" />
+                   <div className="space-y-4 relative z-10">
+                      <div className="p-3.5 bg-white/[0.03] rounded-2xl flex items-center gap-3 border border-white/5 group-hover:bg-white/[0.06] transition-all">
+                         <div className="p-2 bg-[var(--accent-gold)]/10 rounded-xl">
+                            <MapPin size={18} className="text-[var(--accent-gold)]" />
                          </div>
-                         <div className="text-sm">
+                         <div className="text-xs">
                             <p className="font-bold text-white/90 leading-snug">{s.direccion}</p>
-                            <p className="text-[10px] text-white/30 font-black uppercase tracking-widest mt-1.5">{s.comuna}</p>
+                            <p className="text-[8px] text-white/30 font-black uppercase tracking-widest mt-1">{s.comuna}</p>
                          </div>
                       </div>
 
-                      <div className="flex items-center justify-between py-6 border-y border-white/5">
+                      <div className="flex items-center justify-between py-4 border-y border-white/5">
                          <div className="flex flex-col">
-                            <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Inversión Total</span>
-                            <div className="text-3xl font-black text-white tracking-tighter mt-1">$ {s.precio_total?.toLocaleString()}</div>
+                            <span className="text-[8px] font-black text-white/30 uppercase tracking-widest">Inversión</span>
+                            <div className="text-xl font-black text-white tracking-tighter mt-0.5">$ {s.precio_total?.toLocaleString()}</div>
                          </div>
-                         <div className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border shadow-lg ${isFin ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500' : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500'}`}>
+                         <div className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border shadow-lg ${isFin ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500' : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500'}`}>
                             {s.estado}
                          </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-2 gap-2">
                         {isFin ? (
                           <>
                             <button 
                               onClick={() => generatePDF(s, 'pago')} 
-                              className="flex items-center justify-center gap-3 py-4 rounded-2xl bg-emerald-500 text-black font-black text-[10px] uppercase tracking-[0.2em] hover:brightness-110 active:scale-95 transition-all shadow-xl shadow-emerald-500/20"
+                              className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white/5 border border-[var(--accent-gold)]/30 text-[var(--accent-gold)] font-black text-[9px] uppercase tracking-[0.1em] hover:bg-[var(--accent-gold)] hover:text-black active:scale-95 transition-all shadow-lg"
                             >
-                              <FileText size={18} /> Comprobante
+                              <FileText size={16} /> Comprobante
                             </button>
                             <button 
                               onClick={() => handleRehabilitar(s.id)} 
-                              className="flex items-center justify-center gap-3 py-4 rounded-2xl border border-white/10 text-white/30 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-white/5 active:scale-95 transition-all"
+                              className="flex items-center justify-center gap-2 py-2.5 rounded-xl border border-white/5 bg-white/[0.02] text-white/20 font-black text-[9px] uppercase tracking-[0.1em] hover:text-white hover:bg-white/10 active:scale-95 transition-all"
                             >
-                              <RotateCcw size={18} /> Reabrir
+                              <RotateCcw size={16} /> Reabrir
                             </button>
                           </>
                         ) : (
                           <>
                             <button 
                               onClick={() => handleFinalizarEfectivo(s.id, s.precio_total)} 
-                              className="flex items-center justify-center gap-3 py-4 rounded-2xl bg-gradient-to-r from-[var(--accent-gold)] to-[#b8860b] text-black font-black text-[10px] uppercase tracking-[0.2em] hover:brightness-110 active:scale-95 transition-all shadow-xl shadow-[var(--accent-gold)]/20"
+                              className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gradient-to-r from-[var(--accent-gold)] to-[#b8860b] text-black font-black text-[9px] uppercase tracking-[0.1em] hover:brightness-110 active:scale-95 transition-all shadow-xl shadow-[var(--accent-gold)]/20"
                             >
-                              <CheckCircle size={18} /> Finalizar
+                              <CheckCircle size={16} /> Finalizar
                             </button>
                             <button 
                               onClick={() => generatePDF(s, 'reserva')} 
-                              className="flex items-center justify-center gap-3 py-4 rounded-2xl border border-[var(--accent-gold)]/40 text-[var(--accent-gold)] font-black text-[10px] uppercase tracking-[0.2em] hover:bg-[var(--accent-gold)]/10 active:scale-95 transition-all"
+                              className="flex items-center justify-center gap-2 py-2.5 rounded-xl border border-[var(--accent-gold)]/40 text-[var(--accent-gold)] font-black text-[9px] uppercase tracking-[0.1em] hover:bg-[var(--accent-gold)]/10 active:scale-95 transition-all"
                             >
-                              <FileText size={18} /> Reserva
+                              <FileText size={16} /> Reserva
                             </button>
                           </>
                         )}
@@ -635,13 +559,16 @@ function SerenatasContent() {
 }
 
 export default function SerenatasPage() {
+  const searchParams = useSearchParams();
+  const estado = searchParams.get('estado') || 'confirmada';
+
   return (
     <Suspense fallback={
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="animate-spin text-[var(--accent-gold)]" size={48} />
       </div>
     }>
-      <SerenatasContent />
+      <SerenatasContent key={estado} />
     </Suspense>
   );
 }

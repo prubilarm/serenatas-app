@@ -183,11 +183,15 @@ La diferencia pendiente (si existe) debe ser liquidada al finalizar el servicio.
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {pagos.map((pago) => (
+                {pagos.map((pago: any) => (
                   <tr key={pago.id} className="hover:bg-white/[0.02] transition-all group border-b border-white/[0.02]">
                     <td className="px-8 py-5">
-                      <div className="font-black text-white text-sm uppercase tracking-tight">{pago.serenatas?.nombre_cliente || 'Sin nombre'}</div>
-                      <div className="text-[10px] text-white/30 font-bold uppercase mt-0.5">{pago.serenatas?.motivo || 'Evento eliminado'}</div>
+                      <div className="font-black text-white text-sm uppercase tracking-tight">
+                        {pago.serenatas?.clientes?.nombre || pago.serenatas?.nombre_cliente || 'Sin nombre'}
+                      </div>
+                      <div className="text-[10px] text-white/30 font-bold uppercase mt-0.5">
+                        {pago.serenatas?.motivo || 'Evento'} - {pago.serenatas?.nombre_festejada}
+                      </div>
                     </td>
                     <td className="px-8 py-5 text-xs font-bold text-white/60">
                       {new Date(pago.created_at).toLocaleDateString('es-CL', { day: '2-digit', month: 'short' })}

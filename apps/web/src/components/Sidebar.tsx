@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import {
   LayoutDashboard,
@@ -28,6 +28,7 @@ const menuItems = [
 
 const Sidebar = () => {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -37,7 +38,6 @@ const Sidebar = () => {
   }, []);
 
   if (pathname === '/login') return null;
-  // Si no está montado (SSR), no renderizamos partes que dependan del cliente para evitar error 500
   if (!mounted) return null;
 
   const handleLogout = async () => {
@@ -46,11 +46,26 @@ const Sidebar = () => {
     router.refresh();
   };
 
+  const isEstadoFinalizada = searchParams.get('estado') === 'finalizada';
+
   const NavLinks = ({ onClose }: { onClose?: () => void }) => (
     <nav className="flex-1 px-5 py-6">
       <ul className="space-y-2">
         {menuItems.map((item) => {
-          const isActive = pathname === item.href;
+          // Lógica de detección ultra-precisa y excluyente
+          let isActive = false;
+          
+          if (item.href.includes('estado=finalizada')) {
+            // Es el botón de Finalizadas
+            isActive = pathname === '/serenatas' && isEstadoFinalizada;
+          } else if (item.href === '/serenatas') {
+            // Es el botón de Serenatas (Control)
+            isActive = pathname === '/serenatas' && !isEstadoFinalizada;
+          } else {
+            // Es cualquier otro botón (Inicio, Agenda, etc)
+            isActive = pathname === item.href.split('?')[0];
+          }
+          
           return (
             <li key={item.href}>
               <Link
@@ -117,7 +132,16 @@ const Sidebar = () => {
       {/* BOTTOM NAV MÓVIL */}
       <nav className="bottom-nav xl:hidden">
         {menuItems.slice(1, 6).map((item) => {
-          const isActive = pathname === item.href;
+          // Aplicamos la misma lógica precisa al menú de abajo
+          let isActive = false;
+          if (item.href.includes('estado=finalizada')) {
+            isActive = pathname === '/serenatas' && isEstadoFinalizada;
+          } else if (item.href === '/serenatas') {
+            isActive = pathname === '/serenatas' && !isEstadoFinalizada;
+          } else {
+            isActive = pathname === item.href.split('?')[0];
+          }
+          
           return (
             <Link key={item.href} href={item.href} className={`flex-1 flex flex-col items-center justify-center gap-1.5 ${isActive ? 'text-[var(--accent-gold)]' : 'text-white/30'}`}>
               <div className={`p-1.5 rounded-lg ${isActive ? 'bg-[var(--accent-gold)]/10' : ''}`}>
