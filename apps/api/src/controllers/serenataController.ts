@@ -7,7 +7,17 @@ export const getSerenatas = async (req: Request, res: Response) => {
   try {
     const { data, error } = await supabase
       .from('serenatas')
-      .select('*, clientes(nombre, telefono)') // Traemos datos del cliente unidos
+      .select(`
+        *,
+        participantes:usuario_serenata(
+          id,
+          usuario_id,
+          rol_en_serenata,
+          monto_comprometido,
+          estado_pago,
+          cliente:usuarios(nombre, telefono)
+        )
+      `)
       .order('fecha', { ascending: false });
 
     if (error) throw error;

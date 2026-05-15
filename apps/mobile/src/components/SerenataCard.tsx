@@ -20,29 +20,68 @@ export default function SerenataCard({ serenata, onUpdate, onEdit }: any) {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [montoPago, setMontoPago] = useState('');
   const [medioPago, setMedioPago] = useState('Transferencia');
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   
   const s = serenata;
   
   const handleStatusToggle = async () => {
-    if (s.estado !== 'completada') {
-      setMontoPago(s.precio_total?.toString() || '');
-      setShowPaymentModal(true);
-    } else {
-      try {
-        await supabase.from('serenatas').update({ estado: 'pendiente' }).eq('id', s.id);
-        if (onUpdate) onUpdate();
-      } catch (e: any) { Alert.alert('Error', e.message); }
-    }
+    // Ahora abrimos el modal de pago siempre que queramos registrar algo, 
+    // o para finalizar si el saldo es 0.
+    setShowPaymentModal(true);
   };
 
-  const confirmFinalization = async () => {
+  const confirmPayment = async () => {
+    if (!selectedUserId || !montoPago) {
+      Alert.alert('Error', 'Selecciona un cliente y el monto.');
+      return;
+    }
     try {
-      const { error } = await supabase.from('serenatas').update({ estado: 'completada' }).eq('id', s.id);
-      if (error) throw error;
+      const monto = Number(montoPago);
+      // 1. Insertar Pago
+      const { error: pagoErr } = await supabase.from('pagos').insert([{
+        serenata_id: s.id,
+        usuario_id: selectedUserId,
+        monto: monto,
+        metodo: medioPago.toLowerCase(),
+        fecha_pago: new Date().toISOString()
+      }]);
+      if (pagoErr) throw pagoErr;
+
+      // 2. Actualizar estado_pago en usuario_serenata
+      // Necesitamos saber cuánto ha pagado este usuario en total
+      const { data: pagosUsuario } = await supabase
+        .from('pagos')
+        .select('monto')
+        .eq('serenata_id', s.id)
+        .eq('usuario_id', selectedUserId);
+      
+      const totalPagadoUsuario = (pagosUsuario || []).reduce((acc, curr) => acc + Number(curr.monto), 0);
+      const participante = s.participantes?.find((p: any) => p.usuario_id === selectedUserId);
+      
+      let nuevoEstado = 'pendiente';
+      if (totalPagadoUsuario >= participante.monto_comprometido) nuevoEstado = 'pagado';
+      else if (totalPagadoUsuario > 0) nuevoEstado = 'abonado';
+
+      await supabase
+        .from('usuario_serenata')
+        .update({ estado_pago: nuevoEstado })
+        .eq('serenata_id', s.id)
+        .eq('usuario_id', selectedUserId);
+
+      // 3. Verificar si la serenata completa está pagada
+      const { data: todosLosPagos } = await supabase.from('pagos').select('monto').eq('serenata_id', s.id);
+      const totalSerenata = (todosLosPagos || []).reduce((acc, curr) => acc + Number(curr.monto), 0);
+      
+      if (totalSerenata >= s.precio_total) {
+        await supabase.from('serenatas').update({ estado: 'completada' }).eq('id', s.id);
+      }
+
       setShowPaymentModal(false);
+      setMontoPago('');
       if (onUpdate) onUpdate();
+      Alert.alert('Éxito', 'Pago registrado correctamente.');
     } catch (e: any) { 
-      Alert.alert('Error', 'No se pudo completar: ' + e.message); 
+      Alert.alert('Error', 'No se pudo registrar el pago: ' + e.message); 
     }
   };
 
@@ -172,6 +211,19 @@ export default function SerenataCard({ serenata, onUpdate, onEdit }: any) {
         <Text style={styles.festejadaName}>{s.nombre_festejada}</Text>
       </View>
 
+      <View style={styles.participantsList}>
+        <Text style={styles.participantsTitle}>PARTICIPANTES:</Text>
+        {(s.participantes || []).map((p: any) => (
+          <View key={p.id} style={styles.participantRow}>
+            <Text style={styles.participantName}>{p.cliente?.nombre}</Text>
+            <View style={[styles.miniBadge, p.estado_pago === 'pagado' ? styles.bgSuccess : p.estado_pago === 'abonado' ? styles.bgInfo : styles.bgWarning]}>
+               <Text style={styles.miniBadgeText}>{p.estado_pago.toUpperCase()}</Text>
+            </View>
+            <Text style={styles.participantAmount}>$ {p.monto_comprometido?.toLocaleString()}</Text>
+          </View>
+        ))}
+      </View>
+
       <TouchableOpacity style={styles.addressBox} onPress={openMap}>
         <MapPin size={20} color="#D4AF37" />
         <View style={{ flex: 1, marginLeft: 10 }}>
@@ -214,6 +266,19 @@ export default function SerenataCard({ serenata, onUpdate, onEdit }: any) {
               <Text style={styles.paymentTitle}>REGISTRAR PAGO</Text>
               <TouchableOpacity onPress={() => setShowPaymentModal(false)}><X color="#666" /></TouchableOpacity>
            </View>
+           <Text style={styles.paymentLabel}>¿QUIÉN PAGA?</Text>
+           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10 }}>
+              {(s.participantes || []).map((p: any) => (
+                <TouchableOpacity 
+                  key={p.usuario_id} 
+                  style={[styles.clientChip, selectedUserId === p.usuario_id && styles.clientChipActive]} 
+                  onPress={() => setSelectedUserId(p.usuario_id)}
+                >
+                   <Text style={[styles.clientChipText, selectedUserId === p.usuario_id && styles.whiteText]}>{p.cliente?.nombre}</Text>
+                </TouchableOpacity>
+              ))}
+           </ScrollView>
+
            <Text style={styles.paymentLabel}>MONTO RECIBIDO</Text>
            <TextInput style={styles.paymentInput} keyboardType="numeric" value={montoPago} onChangeText={setMontoPago} />
            <Text style={styles.paymentLabel}>MEDIO DE PAGO</Text>
@@ -224,8 +289,8 @@ export default function SerenataCard({ serenata, onUpdate, onEdit }: any) {
                 </TouchableOpacity>
               ))}
            </View>
-           <TouchableOpacity style={styles.confirmPayBtn} onPress={confirmFinalization}>
-              <Text style={styles.confirmPayText}>GUARDAR Y FINALIZAR</Text>
+           <TouchableOpacity style={styles.confirmPayBtn} onPress={confirmPayment}>
+              <Text style={styles.confirmPayText}>REGISTRAR PAGO</Text>
            </TouchableOpacity>
         </View></View>
       </Modal>
@@ -272,5 +337,19 @@ const styles = StyleSheet.create({
   methodText: { color: '#666', fontWeight: 'bold', fontSize: 11 },
   methodTextActive: { color: '#000' },
   confirmPayBtn: { backgroundColor: '#2ecc71', padding: 18, borderRadius: 15, alignItems: 'center', marginTop: 25 },
-  confirmPayText: { color: '#000', fontWeight: 'bold' }
+  confirmPayText: { color: '#000', fontWeight: 'bold' },
+  participantsList: { marginBottom: 15, padding: 10, backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 12 },
+  participantsTitle: { color: '#444', fontSize: 9, fontWeight: 'bold', marginBottom: 8 },
+  participantRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 5, gap: 10 },
+  participantName: { color: '#FFF', fontSize: 13, flex: 1 },
+  participantAmount: { color: '#FFF', fontSize: 12, fontWeight: 'bold' },
+  miniBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+  miniBadgeText: { fontSize: 8, fontWeight: 'bold', color: '#000' },
+  bgSuccess: { backgroundColor: '#2ecc71' },
+  bgWarning: { backgroundColor: '#f1c40f' },
+  bgInfo: { backgroundColor: '#3498db' },
+  clientChip: { paddingHorizontal: 15, paddingVertical: 8, borderRadius: 20, backgroundColor: '#1A1A1A', marginRight: 10, borderWidth: 1, borderColor: '#333' },
+  clientChipActive: { backgroundColor: '#D4AF37', borderColor: '#D4AF37' },
+  clientChipText: { color: '#666', fontSize: 12, fontWeight: 'bold' },
+  whiteText: { color: '#000' }
 });

@@ -28,7 +28,11 @@ export default function ClientesScreen() {
 
   const fetchClientes = async () => {
     try {
-      const { data } = await supabase.from('clientes').select('*').order('nombre', { ascending: true });
+      const { data } = await supabase
+        .from('usuarios')
+        .select('*')
+        .eq('tipo_usuario', 'cliente')
+        .order('nombre', { ascending: true });
       setClientes(data || []);
     } catch (e) {
       console.error(e);
@@ -49,17 +53,11 @@ export default function ClientesScreen() {
     }
 
     try {
-      const uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-        const r = Math.random() * 16 | 0;
-        const v = c === 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-      });
-
-      const { error } = await supabase.from('clientes').insert([{
-        id: uuid,
+      const { error } = await supabase.from('usuarios').insert([{
         nombre,
         telefono,
-        observaciones
+        observaciones,
+        tipo_usuario: 'cliente'
       }]);
 
       if (error) throw error;

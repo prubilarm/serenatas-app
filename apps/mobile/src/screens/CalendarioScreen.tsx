@@ -23,7 +23,20 @@ export default function CalendarioScreen() {
   const [filteredSerenatas, setFilteredSerenatas] = useState<any[]>([]);
 
   const fetchData = async () => {
-    const { data } = await supabase.from('serenatas').select('*').order('hora', { ascending: true });
+    const { data } = await supabase
+      .from('serenatas')
+      .select(`
+        *,
+        participantes:usuario_serenata(
+          id,
+          usuario_id,
+          rol_en_serenata,
+          monto_comprometido,
+          estado_pago,
+          cliente:usuarios(id, nombre, telefono)
+        )
+      `)
+      .order('hora', { ascending: true });
     if (data) {
       setSerenatas(data);
       const marked: any = {};

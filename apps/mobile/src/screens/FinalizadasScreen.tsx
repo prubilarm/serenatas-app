@@ -15,14 +15,30 @@ export default function FinalizadasScreen() {
 
   const fetchData = async () => {
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('serenatas')
-        .select('*')
+        .select(`
+          *,
+          participantes:usuario_serenata(
+            id,
+            usuario_id,
+            rol_en_serenata,
+            monto_comprometido,
+            estado_pago,
+            cliente:usuarios(id, nombre, telefono)
+          )
+        `)
         .eq('estado', 'completada')
         .order('fecha', { ascending: false });
+      
+      if (error) throw error;
       setSerenatas(data || []);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); setRefreshing(false); }
+    } catch (e) { 
+      console.error(e); 
+    } finally { 
+      setLoading(false); 
+      setRefreshing(false); 
+    }
   };
 
   useEffect(() => { 
@@ -45,8 +61,8 @@ export default function FinalizadasScreen() {
     if (!searchQuery.trim()) return serenatas;
     return serenatas.filter((s: any) => 
       s.nombre_festejada?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.nombre_cliente?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.comuna?.toLowerCase().includes(searchQuery.toLowerCase())
+      s.comuna?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.participantes?.some((p: any) => p.cliente?.nombre?.toLowerCase().includes(searchQuery.toLowerCase()))
     );
   }, [serenatas, searchQuery]);
 

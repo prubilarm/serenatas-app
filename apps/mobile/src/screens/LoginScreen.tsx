@@ -155,6 +155,19 @@ export default function LoginScreen({ onLogin }: any) {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
 
+      const { data: userData, error: userError } = await supabase
+        .from('usuarios')
+        .select('tipo_usuario')
+        .eq('id', data.user.id)
+        .single();
+
+      if (userError || !userData || userData.tipo_usuario !== 'admin') {
+        await supabase.auth.signOut();
+        Alert.alert('Acceso Denegado', 'Solo los administradores pueden ingresar al sistema.');
+        setLoading(false);
+        return;
+      }
+
       // Si el login es exitoso, preguntamos si quiere activar huella si no lo ha hecho
       const biometricsEnabled = await SecureStore.getItemAsync('biometrics_enabled');
       if (biometricsAvailable && biometricsEnabled !== 'true') {

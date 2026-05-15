@@ -105,10 +105,97 @@ const SongPickerModal = ({ visible, canciones, onClose, onToggle, limit }: any) 
   );
 };
 
+// MODAL DE SELECCIÓN DE CLIENTES
+const ClienteSelectorModal = ({ visible, clientes, onClose, onSelect }: any) => {
+    const [monto, setMonto] = useState('');
+    const [rol, setRol] = useState('comprador');
+    const [search, setSearch] = useState('');
+    const [selectedUser, setSelectedUser] = useState<any>(null);
+
+    const filtered = clientes.filter((c: any) => c.nombre.toLowerCase().includes(search.toLowerCase()));
+
+    const handleConfirm = () => {
+        if (!selectedUser || !monto) return;
+        onSelect({ 
+            usuario_id: selectedUser.id, 
+            nombre: selectedUser.nombre, 
+            rol_en_serenata: rol, 
+            monto_comprometido: Number(monto) 
+        });
+        setSelectedUser(null);
+        setMonto('');
+        onClose();
+    };
+
+    return (
+        <Modal visible={visible} animationType="slide" transparent={true}>
+            <View style={styles.pickerOverlay}>
+                <ImageBackground source={require('../../assets/fondo_app.jpg')} style={{ flex: 1 }} resizeMode="cover">
+                <View style={[styles.bgOverlay, { borderTopLeftRadius: 30, borderTopRightRadius: 30 }]}>
+                    <View style={styles.pickerHeader}>
+                        <Text style={styles.pickerTitle}>Asociar Cliente</Text>
+                        <TouchableOpacity onPress={onClose}><X size={24} color="#666" /></TouchableOpacity>
+                    </View>
+                    
+                    {!selectedUser ? (
+                        <>
+                            <TextInput style={styles.pickerSearch} placeholder="Buscar cliente..." placeholderTextColor="#666" value={search} onChangeText={setSearch} />
+                            <ScrollView style={{ flex: 1, paddingHorizontal: 20 }}>
+                                {filtered.map((c: any) => (
+                                    <TouchableOpacity key={c.id} style={styles.comunaItem} onPress={() => setSelectedUser(c)}>
+                                        <Text style={{ color: '#FFF', fontWeight: 'bold' }}>{c.nombre}</Text>
+                                        <Text style={{ color: '#666', fontSize: 12 }}>{c.telefono}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                        </>
+                    ) : (
+                        <View style={{ padding: 25 }}>
+                            <Text style={{ color: '#D4AF37', fontSize: 18, fontWeight: 'bold', marginBottom: 20 }}>{selectedUser.nombre}</Text>
+                            
+                            <Text style={styles.sectionTitle}>Monto Comprometido</Text>
+                            <TextInput 
+                                style={styles.input} 
+                                placeholder="Ej: 20000" 
+                                placeholderTextColor="#555" 
+                                keyboardType="numeric" 
+                                value={monto} 
+                                onChangeText={setMonto} 
+                            />
+
+                            <Text style={styles.sectionTitle}>Rol en Serenata</Text>
+                            <View style={styles.typeRow}>
+                                {['comprador', 'contacto', 'acompañante'].map(r => (
+                                    <TouchableOpacity 
+                                        key={r} 
+                                        style={[styles.typeBtn, rol === r && styles.typeBtnActive]} 
+                                        onPress={() => setRol(r)}
+                                    >
+                                        <Text style={[styles.typeBtnText, rol === r && styles.typeBtnTextActive]}>{r.toUpperCase()}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                            <TouchableOpacity style={styles.submitBtn} onPress={handleConfirm}>
+                                <Text style={styles.submitBtnText}>AGREGAR AL EVENTO</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={{ marginTop: 15, alignItems: 'center' }} onPress={() => setSelectedUser(null)}>
+                                <Text style={{ color: '#666' }}>Volver a la lista</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+                </View>
+                </ImageBackground>
+            </View>
+        </Modal>
+    );
+};
+
 // MODAL DE COMUNAS
 const ComunaPickerModal = ({ visible, onSelect, onClose }: any) => {
     const [query, setQuery] = useState('');
-    const filtered = COMUNAS.filter(c => c.toLowerCase().includes(query.toLowerCase()));
+    const { COMUNAS } = require('../lib/comunas');
+    const filtered = COMUNAS.filter((c: string) => c.toLowerCase().includes(query.toLowerCase()));
     return (
         <Modal visible={visible} animationType="fade" transparent={true}>
             <View style={styles.pickerOverlay}>
@@ -120,7 +207,7 @@ const ComunaPickerModal = ({ visible, onSelect, onClose }: any) => {
                     </View>
                     <TextInput style={styles.pickerSearch} placeholder="Filtrar comuna..." placeholderTextColor="#666" value={query} onChangeText={setQuery} />
                     <ScrollView style={{ flex: 1, padding: 15 }}>
-                        {filtered.map(c => (
+                        {filtered.map((c: string) => (
                             <TouchableOpacity key={c} style={styles.comunaItem} onPress={() => { onSelect(c); onClose(); }}>
                                 <Text style={{ color: '#FFF' }}>{c}</Text>
                             </TouchableOpacity>
@@ -161,6 +248,9 @@ export default function AgendaScreen() {
   const [precio, setPrecio] = useState('25000');
   const [tipo, setTipo] = useState('express');
   const [canciones, setCanciones] = useState<string[]>([]);
+  const [listaClientes, setListaClientes] = useState<any[]>([]);
+  const [selectedClientes, setSelectedClientes] = useState<any[]>([]);
+  const [showClienteSelector, setShowClienteSelector] = useState(false);
 
   useEffect(() => {
     if (tipo === 'express') setPrecio('25000');
@@ -176,10 +266,39 @@ export default function AgendaScreen() {
 
   const fetchData = async () => {
     try {
-      const { data } = await supabase.from('serenatas').select('*').order('fecha', { ascending: true });
+      // Query con join para obtener clientes asociados
+      const { data, error } = await supabase
+        .from('serenatas')
+        .select(`
+          *,
+          participantes:usuario_serenata(
+            id,
+            usuario_id,
+            rol_en_serenata,
+            monto_comprometido,
+            estado_pago,
+            cliente:usuarios(id, nombre, telefono)
+          )
+        `)
+        .order('fecha', { ascending: true });
+      
+      if (error) throw error;
       setSerenatas(data || []);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); setRefreshing(false); }
+    } catch (e) { 
+      console.error(e); 
+    } finally { 
+      setLoading(false); 
+      setRefreshing(false); 
+    }
+  };
+
+  const fetchClientes = async () => {
+    const { data } = await supabase
+      .from('usuarios')
+      .select('*')
+      .eq('tipo_usuario', 'cliente')
+      .order('nombre', { ascending: true });
+    setListaClientes(data || []);
   };
 
   useEffect(() => { 
@@ -231,20 +350,94 @@ export default function AgendaScreen() {
   };
 
   const handleCreateOrUpdate = async () => {
-    if (!nombreCliente || !festejada || !fecha) { Alert.alert('Faltan datos', 'Completa los campos.'); return; }
+    if (!festejada || !fecha || selectedClientes.length === 0) { 
+      Alert.alert('Faltan datos', 'Completa la festejada, fecha y al menos un cliente.'); 
+      return; 
+    }
+    
     try {
-      const p = { nombre_cliente: nombreCliente, telefono, nombre_festejada: festejada, motivo, fecha, hora, direccion, comuna, precio_total: Number(precio), tipo, canciones };
-      if (editingId) await supabase.from('serenatas').update(p).eq('id', editingId);
-      else await supabase.from('serenatas').insert([{ ...p, estado: 'pendiente' }]);
-      setShowModal(false); setEditingId(null); resetForm(); fetchData();
-      // El calendario se actualizará automáticamente si está en modo observación de Supabase o al refrescar
-    } catch (e: any) { Alert.alert('Error', e.message); }
+      const { data: { user } } = await supabase.auth.getUser();
+      const p = { 
+        admin_id: user?.id,
+        nombre_festejada: festejada, 
+        motivo, 
+        fecha, 
+        hora, 
+        direccion, 
+        comuna, 
+        precio_total: Number(precio), 
+        tipo, 
+        canciones 
+      };
+
+      let serenataId = editingId;
+      if (editingId) {
+        await supabase.from('serenatas').update(p).eq('id', editingId);
+        // Limpiar relaciones antiguas para re-insertar (simplificado)
+        await supabase.from('usuario_serenata').delete().eq('serenata_id', editingId);
+      } else {
+        const { data, error } = await supabase.from('serenatas').insert([{ ...p, estado: 'pendiente' }]).select();
+        if (error) throw error;
+        serenataId = data[0].id;
+      }
+
+      // Insertar participantes
+      const participantes = selectedClientes.map(c => ({
+        usuario_id: c.usuario_id,
+        serenata_id: serenataId,
+        rol_en_serenata: c.rol_en_serenata,
+        monto_comprometido: c.monto_comprometido,
+        estado_pago: 'pendiente'
+      }));
+
+      await supabase.from('usuario_serenata').insert(participantes);
+
+      setShowModal(false); 
+      setEditingId(null); 
+      resetForm(); 
+      fetchData();
+    } catch (e: any) { 
+      Alert.alert('Error', e.message); 
+    }
   };
 
-  const resetForm = () => { setNombreCliente(''); setTelefono(''); setFestejada(''); setMotivo(''); setFecha(''); setHora(''); setDireccion(''); setComuna(''); setPrecio('25000'); setTipo('express'); setCanciones([]); };
+  const resetForm = () => { 
+    setNombreCliente(''); 
+    setTelefono(''); 
+    setFestejada(''); 
+    setMotivo(''); 
+    setFecha(''); 
+    setHora(''); 
+    setDireccion(''); 
+    setComuna(''); 
+    setPrecio('25000'); 
+    setTipo('express'); 
+    setCanciones([]); 
+    setSelectedClientes([]);
+  };
 
   const handleEdit = (s: any) => {
-    setEditingId(s.id); setNombreCliente(s.nombre_cliente || ''); setTelefono(s.telefono || ''); setFestejada(s.nombre_festejada); setMotivo(s.motivo || ''); setFecha(s.fecha); setHora(s.hora || ''); setDireccion(s.direccion || ''); setComuna(s.comuna || ''); setPrecio((s.precio_total || 0).toString()); setTipo(s.tipo || 'express'); setCanciones(s.canciones || []); setShowModal(true);
+    setEditingId(s.id); 
+    setFestejada(s.nombre_festejada); 
+    setMotivo(s.motivo || ''); 
+    setFecha(s.fecha); 
+    setHora(s.hora || ''); 
+    setDireccion(s.direccion || ''); 
+    setComuna(s.comuna || ''); 
+    setPrecio((s.precio_total || 0).toString()); 
+    setTipo(s.tipo || 'express'); 
+    setCanciones(s.canciones || []); 
+    
+    // Mapear participantes a selectedClientes
+    const mapped = (s.participantes || []).map((p: any) => ({
+      usuario_id: p.usuario_id,
+      nombre: p.cliente?.nombre,
+      rol_en_serenata: p.rol_en_serenata,
+      monto_comprometido: p.monto_comprometido
+    }));
+    setSelectedClientes(mapped);
+    
+    setShowModal(true);
   };
 
   const filteredSerenatas = useMemo(() => {
@@ -252,8 +445,8 @@ export default function AgendaScreen() {
     if (searchQuery.trim()) {
       result = result.filter((s: any) => 
         s.nombre_festejada?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        s.nombre_cliente?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        s.comuna?.toLowerCase().includes(searchQuery.toLowerCase())
+        s.comuna?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        s.participantes?.some((p: any) => p.cliente?.nombre?.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     }
     const d = new Date();
@@ -346,9 +539,33 @@ export default function AgendaScreen() {
                         </TouchableOpacity>
                     </View>
                     <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-                        <Text style={styles.sectionTitle}>Identidad & Contacto</Text>
-                        <TextInput style={styles.input} placeholder="Nombre del Cliente" placeholderTextColor="#555" value={nombreCliente} onChangeText={setNombreCliente} selectionColor="#D4AF37" />
-                        <TextInput style={styles.input} placeholder="Número de Celular (+56...)" placeholderTextColor="#555" value={telefono} onChangeText={setTelefono} keyboardType="phone-pad" selectionColor="#D4AF37" />
+                        <Text style={styles.sectionTitle}>Clientes & Participantes</Text>
+                        <TouchableOpacity 
+                          style={[styles.input, { backgroundColor: 'rgba(212,175,55,0.1)', borderColor: '#D4AF37' }]} 
+                          onPress={() => { fetchClientes(); setShowClienteSelector(true); }}
+                        >
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <User size={16} color="#D4AF37" style={{ marginRight: 8 }} />
+                                <Text style={{ color: '#FFF' }}>AGREGAR CLIENTE</Text>
+                            </View>
+                        </TouchableOpacity>
+
+                        {selectedClientes.map((item, idx) => (
+                          <View key={idx} style={styles.clientSelectedCard}>
+                             <View style={{ flex: 1 }}>
+                                <Text style={styles.clientName}>{item.nombre}</Text>
+                                <View style={styles.row}>
+                                   <Text style={styles.clientRole}>{item.rol_en_serenata.toUpperCase()}</Text>
+                                   <Text style={styles.clientMonto}>$ {item.monto_comprometido?.toLocaleString()}</Text>
+                                </View>
+                             </View>
+                             <TouchableOpacity onPress={() => setSelectedClientes(selectedClientes.filter((_, i) => i !== idx))}>
+                                <X size={20} color="#e74c3c" />
+                             </TouchableOpacity>
+                          </View>
+                        ))}
+
+                        <Text style={styles.sectionTitle}>Identidad de la Festejada</Text>
                         <TextInput style={styles.input} placeholder="Nombre de la Festejada" placeholderTextColor="#555" value={festejada} onChangeText={setFestejada} selectionColor="#D4AF37" />
                         <TextInput style={styles.input} placeholder="Motivo (Ej: Cumpleaños, Aniversario)" placeholderTextColor="#555" value={motivo} onChangeText={setMotivo} selectionColor="#D4AF37" />
                         
@@ -432,6 +649,12 @@ export default function AgendaScreen() {
         }} 
       />
       <ComunaPickerModal visible={showComunaPicker} onSelect={setComuna} onClose={() => setShowComunaPicker(false)} />
+      <ClienteSelectorModal 
+        visible={showClienteSelector} 
+        clientes={listaClientes} 
+        onClose={() => setShowClienteSelector(false)} 
+        onSelect={(c: any) => setSelectedClientes([...selectedClientes, c])} 
+      />
     </SafeAreaView>
   );
 }
@@ -504,5 +727,18 @@ const styles = StyleSheet.create({
   whiteText: { color: '#000', fontWeight: 'bold' },
   pickerDoneBtn: { backgroundColor: '#D4AF37', padding: 10, borderRadius: 10 },
   pickerDoneText: { fontWeight: 'bold' },
-  comunaItem: { padding: 15, borderBottomWidth: 1, borderBottomColor: '#222' }
+  comunaItem: { padding: 15, borderBottomWidth: 1, borderBottomColor: '#222' },
+  clientSelectedCard: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: 'rgba(255,255,255,0.03)', 
+    padding: 15, 
+    borderRadius: 15, 
+    marginBottom: 10,
+    borderLeftWidth: 2,
+    borderLeftColor: '#D4AF37'
+  },
+  clientRole: { color: '#D4AF37', fontSize: 10, fontWeight: 'bold', marginRight: 10 },
+  clientMonto: { color: '#2ecc71', fontSize: 12, fontWeight: 'bold' },
+  clientName: { color: '#FFF', fontSize: 14, fontWeight: 'bold', marginBottom: 4 }
 });
