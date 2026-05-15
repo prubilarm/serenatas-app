@@ -144,7 +144,7 @@ export default function DashboardPage() {
                         <div>
                           <h4 className="text-white font-bold group-hover:text-[var(--accent-gold)] transition-colors">{serenata.nombre_festejada}</h4>
                           <p className="text-[11px] text-white/40 font-medium flex items-center gap-1 mt-1 uppercase tracking-wider">
-                            <Clock size={10} /> {serenata.motivo} • {serenata.comuna}
+                            <Clock size={10} /> {serenata.participantes?.[0]?.cliente?.nombre || 'S/C'} • {serenata.comuna}
                           </p>
                         </div>
                       </div>

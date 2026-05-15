@@ -6,8 +6,9 @@ import crypto from 'crypto';
 export const getClientes = async (req: Request, res: Response) => {
   try {
     const { data, error } = await supabase
-      .from('clientes')
+      .from('usuarios')
       .select('*')
+      .eq('tipo_usuario', 'cliente')
       .order('nombre', { ascending: true });
 
     if (error) throw error;
@@ -20,12 +21,12 @@ export const getClientes = async (req: Request, res: Response) => {
 export const createCliente = async (req: Request, res: Response) => {
   try {
     const nuevoCliente: any = {
-      id: crypto.randomUUID(),
-      ...req.body
+      ...req.body,
+      tipo_usuario: 'cliente'
     };
     
     const { data, error } = await supabase
-      .from('clientes')
+      .from('usuarios')
       .insert([nuevoCliente])
       .select()
       .single();
