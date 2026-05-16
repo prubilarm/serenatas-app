@@ -48,6 +48,10 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', business: 'El Mariachi Aventurero' });
 });
 
+app.get('/api', (req, res) => {
+  res.json({ message: 'El Mariachi Aventurero API - Use /api/serenatas, /api/pagos, etc.' });
+});
+
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
