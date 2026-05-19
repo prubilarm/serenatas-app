@@ -12,5 +12,8 @@
     "dev:web": "npm run dev -w apps/web",
     "dev:mobile": "npm run start -w apps/mobile",
     "build": "npm run build -w apps/web"
+  },
+  "devDependencies": {
+    "docx": "^9.6.1"
   }
 }

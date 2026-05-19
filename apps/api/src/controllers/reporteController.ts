@@ -42,7 +42,7 @@ export const generateSerenataPDF = async (req: Request, res: Response) => {
     const tipoStr = String(s.tipo || 'estandar');
     const tipo = tipoStr.charAt(0).toUpperCase() + tipoStr.slice(1);
 
-    const folio = String(id).slice(0, 8).toUpperCase();
+    const folio = id.slice(0, 8).toUpperCase();
     const hoy = new Date().toLocaleDateString('es-CL', { year: 'numeric', month: 'long', day: 'numeric' });
 
     const W = 595.28;
@@ -151,7 +151,7 @@ export const generatePagoPDF = async (req: Request, res: Response) => {
 
     if (error || !s) return res.status(404).json({ error: 'No encontrada' });
 
-    const folio = String(id).slice(0, 8).toUpperCase();
+    const folio = id.slice(0, 8).toUpperCase();
     const nombreCliente = s.nombre_cliente || (s as any).clientes?.nombre || 'Particular';
     const fechaFmt = s.fecha
       ? new Date(s.fecha + 'T12:00:00').toLocaleDateString('es-CL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
